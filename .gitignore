@@ -12,3 +12,5 @@
 /backup
 .env
 .DS_Store
+
+*.pyc
