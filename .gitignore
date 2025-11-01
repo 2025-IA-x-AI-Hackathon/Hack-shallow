@@ -15,3 +15,5 @@
 */traces/*
 *.pyc
 app.db
+/be/storage
+/be/data/*

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shallow Mind - 테스트 러너</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#151922; --muted:#8b95a7; --text:#e6eaf2; --border:#1f2530;
+            --vet:#2aa198; --beh:#e99239; --nut:#67b26f; --rep:#9b59b6; --user:#2d6cdf; }
+    *{box-sizing:border-box} body{margin:0;background:#0b0d12;color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans KR',Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji',sans-serif}
+    header{padding:16px 20px;border-bottom:1px solid var(--border);background:#0a0c10;position:sticky;top:0;z-index:5}
+    h1{margin:0;font-size:16px} .subtitle{color:var(--muted);font-size:12px;margin-top:4px}
+    .wrap{max-width:1080px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:320px 1fr;gap:16px}
+    .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px}
+    .row{display:flex;gap:8px;align-items:center}
+    select,input,button{height:36px;border-radius:10px;border:1px solid var(--border);background:#0f1115;color:var(--text);padding:0 10px}
+    button{background:var(--user);border:none;min-width:90px}
+    button.secondary{background:#3a4153}
+    .log{display:flex;flex-direction:column;gap:12px}
+    .card{background:#101521;border:1px solid var(--border);border-radius:12px;padding:12px}
+    .badge{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid currentColor;opacity:.9}
+    .vet{color:var(--vet)} .beh{color:var(--beh)} .nut{color:var(--nut)} .rep{color:var(--rep)}
+    .meta{color:var(--muted);font-size:12px;margin-top:6px}
+    .answer{white-space:pre-wrap;margin-top:8px;font-size:14px}
+    .sources{margin-top:8px;font-size:12px;color:var(--muted)}
+    .progress{color:var(--muted);font-size:12px}
+    .list{max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:8px}
+    .list div{padding:6px 8px;border-bottom:1px dotted #222} .list div:last-child{border-bottom:none}
+  </style>
+  <script>
+    const API_ROOT = (localStorage.getItem('api_base') || 'http://127.0.0.1:8000');
+    const API_URL = API_ROOT + '/v1/api/message';
+    const TEST_JSON_URL = API_ROOT + '/static/test/for_test.json';
+    let TEST_DATA = null;
+
+    function colorClass(agent){ if(agent==='veterinarian')return'vet'; if(agent==='behavior')return'beh'; if(agent==='nutrition')return'nut'; if(agent==='report')return'rep'; return''; }
+    function label(agent){ if(agent==='veterinarian')return'수의사'; if(agent==='behavior')return'행동'; if(agent==='nutrition')return'영양'; if(agent==='report')return'보고서'; return agent; }
+
+    async function fetchJSON(url){ const r = await fetch(url,{headers:{'Content-Type':'application/json'}}); if(!r.ok) throw new Error('테스트 JSON 로드 실패'); return await r.json(); }
+    async function getData(){ if (TEST_DATA) return TEST_DATA; return await fetchJSON(TEST_JSON_URL); }
+
+    function el(tag, attrs={}, children=[]) { const e=document.createElement(tag); for(const[k,v] of Object.entries(attrs)){ if(k==='class')e.className=v; else if(k==='text')e.textContent=v; else e.setAttribute(k,v);} for(const c of children)e.appendChild(c); return e; }
+
+    async function runSuite(){
+      const cat = document.getElementById('category').value;
+      const dogId = Number(document.getElementById('dogId').value||0)||undefined;
+      const delayMs = Number(document.getElementById('delay').value||500);
+      const out = document.getElementById('output'); out.innerHTML='';
+      const prog = document.getElementById('progress'); prog.textContent='준비 중...';
+      const data = await getData();
+      const entry = data?.categories?.[cat];
+      if(!entry) { alert('카테고리를 선택하세요.'); return; }
+      const questions = Array.isArray(entry.questions)? entry.questions : [];
+      if(questions.length===0){ alert('질문이 없습니다.'); return; }
+
+      document.getElementById('start').disabled=true;
+      document.getElementById('stop').disabled=false;
+      let stopped=false; document.getElementById('stop').onclick=()=>{stopped=true;};
+      const sid = self.crypto?.randomUUID?.() || String(Date.now());
+
+      for(let i=0;i<questions.length;i++){
+        if(stopped) break;
+        const q = questions[i];
+        prog.textContent = `(${i+1}/${questions.length}) 전송 중...`;
+        try{
+          const body = { message:q, session_id:sid };
+          if(dogId) body.dog_id = dogId;
+          const resp = await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+          const data = await resp.json();
+          if(!resp.ok) throw new Error(data?.detail||'API Error');
+          renderResult(out, q, data);
+        }catch(e){
+          const card = el('div',{class:'card'},[
+            el('div',{class:'meta',text:`질문 실패: ${q}`}),
+            el('div',{class:'answer',text:String(e?.message||e)})
+          ]);
+          out.appendChild(card);
+        }
+        if(i<questions.length-1) await new Promise(r=>setTimeout(r, delayMs));
+      }
+      document.getElementById('start').disabled=false;
+      document.getElementById('stop').disabled=true;
+      prog.textContent='완료';
+    }
+
+    function renderResult(root, question, data){
+      const wrap = el('div',{class:'card'});
+      wrap.appendChild(el('div',{class:'meta',text:`질문: ${question}`}));
+      const results = Array.isArray(data?.results)? data.results : [];
+      if(results.length===0){ wrap.appendChild(el('div',{class:'answer',text:(data?.answer||'')||'(응답 없음)'})); root.appendChild(wrap); return; }
+      for(const r of results){
+        const title = el('div',{class:'badge '+colorClass(r.agent),text:`${label(r.agent)} 에이전트`});
+        const ans = el('div',{class:'answer',text:r.answer||''});
+        const meta = el('div',{class:'meta',text: r.duration_ms? `${r.duration_ms.toFixed(0)}ms` : ''});
+        const sources = Array.isArray(r.retrieved_docs)? r.retrieved_docs : [];
+        const ul = el('div',{class:'sources'});
+        if(sources.length>0){
+          const lines = sources.slice(0,8).map((s,i)=>`- ${s.source||'(unknown)'}${s.page!=null?` (p.${s.page})`:''}`);
+          ul.textContent = `출처:\n${lines.join('\n')}`;
+        }
+        wrap.appendChild(title); wrap.appendChild(ans); wrap.appendChild(meta); wrap.appendChild(ul);
+      }
+      root.appendChild(wrap);
+    }
+
+    async function loadCategories(){
+      const data = await getData();
+      const sel = document.getElementById('category'); sel.innerHTML='';
+      const cats = Object.keys(data?.categories||{});
+      for(const c of cats){ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o);}    }
+
+    window.addEventListener('DOMContentLoaded', ()=>{ loadCategories().catch(err=>alert(err?.message||err)); });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>테스트 러너</h1>
+    <div class="subtitle">test/for_test.json의 질문들을 순차 전송해 응답/출처/에이전트를 확인합니다</div>
+  </header>
+
+  <div class="wrap">
+    <div class="panel">
+      <div class="row" style="margin-bottom:8px">
+        <label style="width:80px;color:var(--muted)">API Base</label>
+        <input id="apiBase" style="flex:1" placeholder="http://127.0.0.1:8000" />
+        <button class="secondary" id="applyApi">적용</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="width:80px;color:var(--muted)">테스트 JSON</label>
+        <input id="jsonFile" type="file" accept="application/json,.json" style="flex:1" />
+        <button class="secondary" id="useStatic">기본 사용</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="width:80px;color:var(--muted)">카테고리</label>
+        <select id="category" style="flex:1"></select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="width:80px;color:var(--muted)">Dog ID</label>
+        <input id="dogId" type="number" min="0" placeholder="옵션" style="flex:1" />
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <label style="width:80px;color:var(--muted)">지연(ms)</label>
+        <input id="delay" type="number" min="0" value="500" style="flex:1" />
+      </div>
+      <div class="row" style="gap:10px">
+        <button id="start">시작</button>
+        <button id="stop" class="secondary" disabled>중지</button>
+        <span id="progress" class="progress"></span>
+      </div>
+      <div style="margin-top:8px" class="row">
+        <a href="./frontend.html" style="color:var(--muted);font-size:12px">← 채팅 데모로 돌아가기</a>
+      </div>
+      <div style="margin-top:8px;color:var(--muted);font-size:12px">
+        테스트 JSON 경로: <code>/static/test/for_test.json</code> · 또는 위에서 직접 업로드
+      </div>
+    </div>
+    <div class="panel">
+      <div id="output" class="log"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('applyApi').onclick = () => {
+      const v = document.getElementById('apiBase').value.trim();
+      if(!v) return; localStorage.setItem('api_base', v); location.reload();
+    };
+    document.getElementById('start').onclick = runSuite;
+
+    // 로컬 JSON 업로드
+    const fileInput = document.getElementById('jsonFile');
+    if (fileInput) {
+      fileInput.addEventListener('change', async (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        try {
+          const text = await f.text();
+          const parsed = JSON.parse(text);
+          if (!parsed || typeof parsed !== 'object' || !parsed.categories) {
+            alert('유효한 형식이 아닙니다. { categories: { ... } } 구조여야 합니다.');
+            return;
+          }
+          TEST_DATA = parsed;
+          await loadCategories();
+          document.getElementById('progress').textContent = `업로드됨: ${f.name}`;
+        } catch (err) {
+          console.error(err);
+          alert('JSON 파싱 실패: ' + (err?.message || err));
+        }
+      });
+    }
+
+    // 기본(static) 데이터로 전환
+    const useStaticBtn = document.getElementById('useStatic');
+    if (useStaticBtn) {
+      useStaticBtn.onclick = async () => {
+        TEST_DATA = null;
+        await loadCategories();
+        document.getElementById('progress').textContent = '기본 테스트 JSON 사용';
+      };
+    }
+  </script>
+</body>
+</html>
+
+
