@@ -66,6 +66,8 @@ jobs:
                   - proxy-network
                 env_file:
                   - .env
+                volumes:
+                  - /home/green/hack/data/storage:/storage
                 restart: unless-stopped
             networks:
               proxy-network:
