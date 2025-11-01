@@ -59,14 +59,18 @@ jobs:
             echo "Create docker-compose.yml file"
             cat > docker-compose.yml << 'EOF'
             services:
-              app:
+              shallow-mind-be:
                 container_name: shallow-mind-be
                 image: ${{ vars.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}:${{ vars.DOCKER_HUB_BE_TAGNAME }}
-                ports:
-                  - '42421:8000'
+                networks:
+                  - proxy-network
                 env_file:
                   - .env
                 restart: unless-stopped
+            networks:
+              proxy-network:
+                name: proxy-network
+                external: true
             EOF
 
             echo "Start updated service"
