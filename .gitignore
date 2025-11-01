@@ -1,0 +1,14 @@
+/.venv
+/node_modules
+/dist
+/build
+/public
+/static
+/templates
+/logs
+/cache
+/tmp
+/backup
+/backup
+.env
+.DS_Store
