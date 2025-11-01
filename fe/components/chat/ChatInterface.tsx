@@ -14,14 +14,19 @@ function ChatInterface() {
 
   useEffect(() => {
     const initialize = async () => {
+      // authStore hydration이 완료될 때까지 대기
+      if (!authStore.isHydrated) {
+        return;
+      }
+
       // 인증되지 않은 경우 로그인 페이지로 이동
-      if (!authStore.isAuthenticated || !authStore.username) {
+      if (!authStore.isAuthenticated || !authStore.userId) {
         router.push('/login');
         return;
       }
 
       // 강아지 목록 로드
-      await chatStore.loadDogs(authStore.username);
+      await chatStore.loadDogs(authStore.userId);
 
       // 첫 번째 강아지가 자동 선택되면 메시지 로드
       if (chatStore.currentDogId) {
@@ -30,7 +35,7 @@ function ChatInterface() {
     };
 
     initialize();
-  }, [router]);
+  }, [router, authStore.isHydrated]);
 
   const handleLogout = () => {
     authStore.logout();
@@ -38,8 +43,8 @@ function ChatInterface() {
     router.push('/login');
   };
 
-  // 로딩 상태
-  if (chatStore.isLoading && chatStore.dogs.length === 0) {
+  // Hydration 대기 중이거나 로딩 상태
+  if (!authStore.isHydrated || (chatStore.isLoading && chatStore.dogs.length === 0)) {
     return (
       <div className="flex flex-col h-screen max-w-6xl mx-auto bg-background">
         <div className="flex items-center justify-center flex-1">
@@ -60,7 +65,7 @@ function ChatInterface() {
           <div className="text-center">
             <p className="text-destructive mb-4">{chatStore.error}</p>
             <button
-              onClick={() => authStore.username && chatStore.loadDogs(authStore.username)}
+              onClick={() => authStore.userId && chatStore.loadDogs(authStore.userId)}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               다시 시도

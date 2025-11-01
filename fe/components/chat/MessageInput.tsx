@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { chatStore } from '@/stores/chatStore';
+import { Loader2, Send } from 'lucide-react';
 
 function MessageInput() {
   const [input, setInput] = useState('');
@@ -19,6 +20,19 @@ function MessageInput() {
   };
 
   const isDisabled = !chatStore.currentDogId || chatStore.isLoading;
+
+  const getLoadingMessage = () => {
+    switch (chatStore.loadingPhase) {
+      case 'analyzing':
+        return 'AI가 질문을 분석하고 있습니다...';
+      case 'routing':
+        return '전문가들에게 질문을 전달하고 있습니다...';
+      case 'responding':
+        return '전문가들이 답변을 작성하고 있습니다...';
+      default:
+        return 'AI가 응답 중입니다...';
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="border-t border-border p-4 bg-card">
@@ -38,16 +52,26 @@ function MessageInput() {
             !chatStore.currentDogId
               ? '강아지를 선택해주세요...'
               : chatStore.isLoading
-              ? 'AI가 응답 중입니다...'
+              ? getLoadingMessage()
               : '메시지를 입력하세요...'
           }
         />
         <button
           type="submit"
           disabled={!input.trim() || isDisabled}
-          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
-          {chatStore.isLoading ? '전송 중...' : '전송'}
+          {chatStore.isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>전송 중</span>
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              <span>전송</span>
+            </>
+          )}
         </button>
       </div>
     </form>

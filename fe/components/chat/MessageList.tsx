@@ -5,6 +5,9 @@ import { chatStore } from '@/stores/chatStore';
 import { ChatMessage } from '@/lib/api';
 import { useEffect, useRef } from 'react';
 import AgentMessageGroup from './AgentMessageGroup';
+import { MultiAgentMessageGroup } from './MultiAgentMessageGroup';
+import { LoadingIndicator } from './LoadingIndicator';
+import { User } from 'lucide-react';
 
 function MessageList() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,9 +56,9 @@ function MessageList() {
         <>
           {messageGroups.map((group, groupIndex) => {
             if (group.type === 'user') {
-              // 사용자 메시지는 개별적으로 표시
+              // 사용자 메시지는 개별적으로 표시 (프로필 아이콘 포함)
               return group.messages.map((message) => (
-                <div key={message.id} className="flex justify-end mb-4">
+                <div key={message.id} className="flex justify-end mb-4 gap-2">
                   <div className="max-w-[70%] px-4 py-2 rounded-lg bg-primary text-primary-foreground">
                     <p className="whitespace-pre-wrap">{message.content}</p>
                     <span className="text-xs opacity-80 mt-1 block">
@@ -65,13 +68,34 @@ function MessageList() {
                       })}
                     </span>
                   </div>
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
                 </div>
               ));
             } else {
-              // assistant 메시지는 AgentMessageGroup으로 그룹화
+              // Assistant messages - 단순 텍스트로 저장됨 (frontend.html과 동일)
               return <AgentMessageGroup key={groupIndex} messages={group.messages} />;
             }
           })}
+
+          {/* Loading Indicator */}
+          {chatStore.loadingPhase && (
+            <LoadingIndicator
+              phase={chatStore.loadingPhase}
+              activeAgents={chatStore.activeAgents}
+              completedAgents={chatStore.completedAgents}
+            />
+          )}
+
+          {/* Show pending multi-agent results during loading */}
+          {chatStore.pendingResults && chatStore.pendingResults.length > 0 && (
+            <MultiAgentMessageGroup
+              results={chatStore.pendingResults}
+              timestamp={new Date().toISOString()}
+            />
+          )}
+
           <div ref={messagesEndRef} />
         </>
       )}
