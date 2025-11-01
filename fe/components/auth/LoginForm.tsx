@@ -20,9 +20,18 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const { access_token } = await api.login(username, password);
-      authStore.login(access_token, username);
-      router.push('/onboarding');
+      const { access_token, userId } = await api.login(username, password);
+      authStore.login(access_token, userId, username);
+
+      // 사용자의 강아지 목록 확인
+      const dogs = await api.getDogs(userId);
+
+      // 강아지가 있으면 채팅 페이지로, 없으면 온보딩 페이지로
+      if (dogs.length > 0) {
+        router.push('/');
+      } else {
+        router.push('/onboarding');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     } finally {
