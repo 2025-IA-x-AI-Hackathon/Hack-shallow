@@ -34,6 +34,35 @@ export async function apiRequest<T>(
   return response.json();
 }
 
+// API Response Types
+export interface Dog {
+  id: number;
+  name: string;
+  breed: string;
+  birth_date: string;
+  sex: string;
+  neutered: boolean;
+  weight_kg: number;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  dog_id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  agent: string | null;
+  created_at: string;
+}
+
+export interface ChatMessageCreate {
+  role: 'user' | 'assistant';
+  content: string;
+  agent?: string | null;
+}
+
 // API 호출 헬퍼 함수들
 export const api = {
   signup: async (username: string, password: string) => {
@@ -85,12 +114,39 @@ export const api = {
     );
   },
 
-  sendMessage: async (message: string) => {
-    return apiRequest<{ response: string }>(
-      '/chat/message',
+  // Dog Management
+  getDogs: async (userId: number) => {
+    return apiRequest<Dog[]>(
+      `/v1/users/${userId}/dogs`,
+      {
+        method: 'GET',
+        requiresAuth: true,
+      }
+    );
+  },
+
+  // Chat Messages
+  getChatMessages: async (dogId: number, limit = 100) => {
+    return apiRequest<ChatMessage[]>(
+      `/v1/dogs/${dogId}/chat/messages?limit=${limit}`,
+      {
+        method: 'GET',
+        requiresAuth: true,
+      }
+    );
+  },
+
+  sendChatMessage: async (dogId: number, content: string) => {
+    const payload: ChatMessageCreate = {
+      role: 'user',
+      content,
+      agent: null,
+    };
+    return apiRequest<ChatMessage>(
+      `/v1/dogs/${dogId}/chat/messages`,
       {
         method: 'POST',
-        body: JSON.stringify({ message }),
+        body: JSON.stringify(payload),
         requiresAuth: true,
       }
     );
