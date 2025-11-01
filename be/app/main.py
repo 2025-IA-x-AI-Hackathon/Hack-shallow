@@ -9,6 +9,7 @@ from graph.flow import run_qa_flow
 from app.routers import dogs_router, chat_router
 from app.routers.users import router as users_router
 from app.routers.dog_info import router as dog_info_router
+from app.routers.auth import router as auth_router
 from db.database import engine, get_session
 from db.models import Base, Dog
 from db.models import DogInfoItem
@@ -92,6 +93,7 @@ async def health() -> dict[str, str]:
 
 
 # 신규 라우터 등록
+app.include_router(auth_router)
 app.include_router(dogs_router)
 app.include_router(chat_router)
 app.include_router(users_router)

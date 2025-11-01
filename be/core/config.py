@@ -18,6 +18,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
+    # OpenAI 설정
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
     embeddings_model: str = Field(
@@ -29,6 +30,11 @@ class Settings(BaseSettings):
     )
     temperature: float = Field(default=0.2, validation_alias="TEMPERATURE")
     max_subtasks: int = Field(default=4, validation_alias="MAX_SUBTASKS")
+
+    # JWT 설정
+    JWT_SECRET_KEY: str = Field(default="your-secret-key-change-this-in-production", validation_alias="JWT_SECRET_KEY")
+    JWT_ALGORITHM: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    JWT_EXPIRATION_DAYS: int = Field(default=7, validation_alias="JWT_EXPIRATION_DAYS")
 
     @field_validator("agents", mode="before")
     @classmethod

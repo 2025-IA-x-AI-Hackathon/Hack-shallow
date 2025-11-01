@@ -23,10 +23,28 @@ class UserUpdate(BaseModel):
 
 class UserRead(BaseModel):
     id: int
-    username: str | None
+    username: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+# 인증 스키마
+class UserSignupRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=100, description="사용자명 (3-100자)")
+    password: str = Field(..., min_length=6, description="비밀번호 (최소 6자)")
+
+
+class UserLoginRequest(BaseModel):
+    username: str = Field(..., description="사용자명")
+    password: str = Field(..., description="비밀번호")
+
+
+class TokenResponse(BaseModel):
+    access_token: str = Field(..., description="JWT 액세스 토큰")
+    token_type: str = Field(default="bearer", description="토큰 타입")
 
 
 # DogInfo 스키마
@@ -78,7 +96,7 @@ class DogBase(BaseModel):
 
 
 class DogCreate(DogBase):
-    user_id: int = Field(..., description="소유 사용자 ID")
+    pass
 
 
 class DogUpdate(BaseModel):
