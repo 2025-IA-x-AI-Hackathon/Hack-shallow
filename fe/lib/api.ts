@@ -1,6 +1,6 @@
 import { authStore } from '@/stores/authStore';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface RequestOptions extends RequestInit {
   requiresAuth?: boolean;
@@ -37,8 +37,8 @@ export async function apiRequest<T>(
 // API 호출 헬퍼 함수들
 export const api = {
   signup: async (username: string, password: string) => {
-    return apiRequest<{ message: string }>(
-      '/auth/signup',
+    return apiRequest<{ id: number; username: string; created_at: string; updated_at: string }>(
+      '/v1/auth/signup',
       {
         method: 'POST',
         body: JSON.stringify({ username, password }),
@@ -46,12 +46,41 @@ export const api = {
     );
   },
 
-  login: async (email: string, password: string) => {
-    return apiRequest<{ token: string; user: { id: string; name: string; email: string } }>(
-      '/auth/login',
+  login: async (username: string, password: string) => {
+    return apiRequest<{ access_token: string; token_type: string }>(
+      '/v1/auth/login',
       {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
+      }
+    );
+  },
+
+  createDog: async (dogData: {
+    name: string;
+    breed?: string;
+    birth_date?: string;
+    sex?: 'male' | 'female' | 'unknown';
+    neutered?: boolean;
+    weight_kg?: number;
+  }) => {
+    return apiRequest<{
+      id: number;
+      user_id: number;
+      name: string;
+      breed?: string;
+      birth_date?: string;
+      sex?: string;
+      neutered?: boolean;
+      weight_kg?: number;
+      created_at: string;
+      updated_at: string;
+    }>(
+      '/v1/dogs',
+      {
+        method: 'POST',
+        body: JSON.stringify(dogData),
+        requiresAuth: true,
       }
     );
   },

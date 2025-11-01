@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
+import { api } from '@/lib/api';
 import ProgressBar from './ProgressBar';
 import FormStep from './FormStep';
 
@@ -12,22 +13,40 @@ export default function OnboardingFlow() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    age: '',
-    occupation: '',
-    interests: '',
-    goals: '',
-    experience: '',
+    breed: '',
+    birth_date: '',
+    sex: 'unknown' as 'male' | 'female' | 'unknown',
+    neutered: false,
+    weight_kg: '',
   });
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < TOTAL_STEPS - 1) {
       setDirection('forward');
       setCurrentStep(currentStep + 1);
     } else {
-      // 온보딩 완료 후 메인 페이지로 이동
-      router.push('/');
+      // 온보딩 완료 - 반려견 정보 저장
+      setIsLoading(true);
+      setError('');
+
+      try {
+        await api.createDog({
+          name: formData.name,
+          breed: formData.breed || undefined,
+          birth_date: formData.birth_date || undefined,
+          sex: formData.sex,
+          neutered: formData.neutered,
+          weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : undefined,
+        });
+        router.push('/');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '반려견 정보 저장에 실패했습니다.');
+        setIsLoading(false);
+      }
     }
   };
 
@@ -47,8 +66,8 @@ export default function OnboardingFlow() {
       case 0:
         return (
           <FormStep
-            title="이름을 알려주세요"
-            description="서비스에서 사용할 이름을 입력해주세요."
+            title="반려견의 이름을 알려주세요"
+            description="반려견의 이름을 입력해주세요."
             direction={direction}
           >
             <input
@@ -56,84 +75,126 @@ export default function OnboardingFlow() {
               value={formData.name}
               onChange={(e) => updateFormData('name', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="이름을 입력하세요"
+              placeholder="예: 뽀삐"
+              required
             />
           </FormStep>
         );
       case 1:
         return (
           <FormStep
-            title="나이를 입력해주세요"
-            description="더 나은 서비스를 제공하기 위해 필요합니다."
+            title="반려견의 품종을 알려주세요"
+            description="품종을 모르시면 넘어가셔도 됩니다."
             direction={direction}
           >
             <input
-              type="number"
-              value={formData.age}
-              onChange={(e) => updateFormData('age', e.target.value)}
+              type="text"
+              value={formData.breed}
+              onChange={(e) => updateFormData('breed', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="나이를 입력하세요"
+              placeholder="예: 푸들"
             />
           </FormStep>
         );
       case 2:
         return (
           <FormStep
-            title="직업을 알려주세요"
-            description="어떤 일을 하고 계신가요?"
+            title="반려견의 생년월일을 알려주세요"
+            description="정확한 날짜를 모르시면 대략적인 날짜를 입력해주세요."
             direction={direction}
           >
             <input
-              type="text"
-              value={formData.occupation}
-              onChange={(e) => updateFormData('occupation', e.target.value)}
+              type="date"
+              value={formData.birth_date}
+              onChange={(e) => updateFormData('birth_date', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="직업을 입력하세요"
             />
           </FormStep>
         );
       case 3:
         return (
           <FormStep
-            title="관심사를 알려주세요"
-            description="어떤 것에 관심이 있으신가요?"
+            title="반려견의 성별을 선택해주세요"
+            description="성별을 선택해주세요."
             direction={direction}
           >
-            <textarea
-              value={formData.interests}
-              onChange={(e) => updateFormData('interests', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-              placeholder="관심사를 입력하세요"
-            />
+            <div className="space-y-3">
+              {[
+                { value: 'male', label: '남아' },
+                { value: 'female', label: '여아' },
+                { value: 'unknown', label: '모름' },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                    formData.sex === option.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="sex"
+                    value={option.value}
+                    checked={formData.sex === option.value}
+                    onChange={(e) => updateFormData('sex', e.target.value)}
+                    className="mr-3"
+                  />
+                  <span className="text-lg">{option.label}</span>
+                </label>
+              ))}
+            </div>
           </FormStep>
         );
       case 4:
         return (
           <FormStep
-            title="목표를 설정해주세요"
-            description="이 서비스를 통해 달성하고 싶은 목표는 무엇인가요?"
+            title="중성화 수술을 받았나요?"
+            description="중성화 여부를 선택해주세요."
             direction={direction}
           >
-            <textarea
-              value={formData.goals}
-              onChange={(e) => updateFormData('goals', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-              placeholder="목표를 입력하세요"
-            />
+            <div className="space-y-3">
+              {[
+                { value: true, label: '예, 받았습니다' },
+                { value: false, label: '아니요, 받지 않았습니다' },
+              ].map((option) => (
+                <label
+                  key={option.value.toString()}
+                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                    formData.neutered === option.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="neutered"
+                    value={option.value.toString()}
+                    checked={formData.neutered === option.value}
+                    onChange={() => updateFormData('neutered', option.value.toString())}
+                    className="mr-3"
+                  />
+                  <span className="text-lg">{option.label}</span>
+                </label>
+              ))}
+            </div>
           </FormStep>
         );
       case 5:
         return (
           <FormStep
-            title="경험을 공유해주세요"
-            description="관련된 경험이 있으신가요?"
+            title="반려견의 체중을 알려주세요"
+            description="체중을 kg 단위로 입력해주세요. (선택사항)"
             direction={direction}
           >
-            <textarea
-              value={formData.experience}
-              onChange={(e) => updateFormData('experience', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-              placeholder="경험을 입력하세요"
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={formData.weight_kg}
+              onChange={(e) => updateFormData('weight_kg', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="예: 5.5"
             />
           </FormStep>
         );
@@ -154,19 +215,24 @@ export default function OnboardingFlow() {
         </AnimatePresence>
       </div>
 
+      {error && (
+        <div className="text-red-500 text-sm text-center">{error}</div>
+      )}
+
       <div className="flex justify-between pt-6 border-t">
         <button
           onClick={handlePrevious}
-          disabled={currentStep === 0}
+          disabled={currentStep === 0 || isLoading}
           className="px-6 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           이전
         </button>
         <button
           onClick={handleNext}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          disabled={isLoading || (currentStep === 0 && !formData.name)}
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {currentStep === TOTAL_STEPS - 1 ? '완료' : '다음'}
+          {isLoading ? '저장 중...' : currentStep === TOTAL_STEPS - 1 ? '완료' : '다음'}
         </button>
       </div>
     </div>

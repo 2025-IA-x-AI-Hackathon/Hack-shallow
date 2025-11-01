@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 
 function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,8 +20,8 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const { token, user } = await api.login(email, password);
-      authStore.login(token, user);
+      const { access_token } = await api.login(username, password);
+      authStore.login(access_token, username);
       router.push('/onboarding');
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
@@ -39,14 +39,14 @@ function LoginForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            이메일
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            사용자 이름
           </label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           />

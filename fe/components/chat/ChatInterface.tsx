@@ -20,8 +20,8 @@ function ChatInterface() {
       <div className="flex items-center justify-between p-4 border-b bg-white">
         <div>
           <h1 className="text-xl font-bold">AI 채팅</h1>
-          {authStore.user && (
-            <p className="text-sm text-gray-600">{authStore.user.name}님, 환영합니다!</p>
+          {authStore.username && (
+            <p className="text-sm text-gray-600">{authStore.username}님, 환영합니다!</p>
           )}
         </div>
         <button

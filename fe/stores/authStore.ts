@@ -2,7 +2,7 @@ import { makeAutoObservable } from 'mobx';
 
 class AuthStore {
   isAuthenticated = false;
-  user: { id: string; name: string; email: string } | null = null;
+  username: string | null = null;
   token: string | null = null;
 
   constructor() {
@@ -11,35 +11,35 @@ class AuthStore {
     // localStorage에서 토큰 복원
     if (typeof window !== 'undefined') {
       const savedToken = localStorage.getItem('auth_token');
-      const savedUser = localStorage.getItem('auth_user');
+      const savedUsername = localStorage.getItem('auth_username');
 
-      if (savedToken && savedUser) {
+      if (savedToken && savedUsername) {
         this.token = savedToken;
-        this.user = JSON.parse(savedUser);
+        this.username = savedUsername;
         this.isAuthenticated = true;
       }
     }
   }
 
-  login(token: string, user: { id: string; name: string; email: string }) {
+  login(token: string, username: string) {
     this.token = token;
-    this.user = user;
+    this.username = username;
     this.isAuthenticated = true;
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('auth_username', username);
     }
   }
 
   logout() {
     this.token = null;
-    this.user = null;
+    this.username = null;
     this.isAuthenticated = false;
 
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_username');
     }
   }
 }
