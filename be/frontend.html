@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shallow Mind - 반려견 전문가 멀티에이전트 데모</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #151922;
+      --muted: #8b95a7;
+      --text: #e6eaf2;
+      --user: #2d6cdf;
+      --vet: #2aa198;
+      --beh: #e99239;
+      --nut: #67b26f;
+      --rep: #9b59b6;
+      --border: #1f2530;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 20% 0%, #0f1320 0%, #0b0d12 60%, #0a0c10 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 12, 16, 0.7);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    header .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding: 24px 16px 120px;
+      overflow-y: auto;
+    }
+    .chat {
+      width: 100%;
+      max-width: 840px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .bubble {
+      padding: 12px 14px;
+      border-radius: 12px;
+      max-width: 80%;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .row { display: flex; gap: 12px; align-items: flex-end; }
+    .row.user { justify-content: flex-end; }
+    .bubble.user { background: rgba(45,108,223,0.15); border: 1px solid rgba(45,108,223,0.35); }
+    .avatar { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; }
+    .avatar.user { background: rgba(45,108,223,0.15); border: 1px solid rgba(45,108,223,0.35); }
+
+    .agent-group { display: grid; gap: 12px; }
+    .agent-card {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; opacity: 0.9; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .agent-title { font-weight: 700; font-size: 13px; }
+    .agent-answer { margin-top: 6px; font-size: 14px; }
+
+    .vet { color: var(--vet); }
+    .beh { color: var(--beh); }
+    .nut { color: var(--nut); }
+    .rep { color: var(--rep); }
+
+    .composer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(180deg, rgba(10,12,16,0) 0%, rgba(10,12,16,0.9) 30%, rgba(10,12,16,1) 100%);
+      padding: 16px;
+      display: flex; justify-content: center;
+    }
+    .composer-inner {
+      width: 100%; max-width: 840px; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 16px; padding: 10px; display: flex; gap: 10px;
+    }
+    textarea {
+      flex: 1; background: transparent; border: none; outline: none; color: var(--text);
+      resize: none; height: 60px; font-size: 14px;
+    }
+    button {
+      background: var(--user); color: white; border: none; border-radius: 10px; padding: 0 16px;
+      font-weight: 600; cursor: pointer; min-width: 90px; height: 40px;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .typing { color: var(--muted); font-size: 12px; margin-left: 6px; }
+
+    /* settings panel */
+    .settings {
+      padding: 16px; margin: 16px; border: 1px solid var(--border); border-radius: 14px;
+      background: var(--panel);
+      max-width: 840px; width: 100%; margin-inline: auto;
+    }
+    .settings h2 { margin: 0 0 12px 0; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .row-inline { display: flex; gap: 8px; align-items: center; }
+    .settings label { font-size: 12px; color: var(--muted); }
+    .settings input, .settings select { width: 100%; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: #0f1115; color: var(--text); padding: 0 10px; }
+    .settings input[type="checkbox"] { width: auto; height: auto; }
+    .settings button { height: 36px; }
+
+    /* floating settings window */
+    .settings-window {
+      position: fixed; right: 16px; bottom: 120px; width: 380px; max-height: 70vh;
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 50; overflow: hidden; display: none;
+    }
+    .settings-header { display:flex; align-items:center; justify-content:space-between; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: move; }
+    .settings-header .title { font-size: 13px; font-weight: 600; }
+    .settings-close { background: transparent; border: none; color: var(--muted); font-size: 16px; cursor: pointer; }
+    .settings-body { padding: 12px; overflow: auto; max-height: calc(70vh - 44px); }
+    .settings-launcher { position: fixed; right: 16px; bottom: 180px; width: 44px; height: 44px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); color: var(--text); display: grid; place-items: center; cursor: pointer; z-index: 40; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>반려견 전문가 멀티에이전트</h1>
+    <div class="subtitle">수의사 · 행동 교정 · 영양 · 보고서 — 에이전트별 답변</div>
+  </header>
+
+  <div class="container">
+    <div style="width:100%;max-width:840px;display:flex;flex-direction:column;gap:16px;">
+      <div id="infoPanel" class="agent-card" style="display:none;">
+        <div class="avatar" style="background:rgba(155,89,182,0.15);border:1px solid rgba(155,89,182,0.35);">ℹ️</div>
+        <div>
+          <div class="agent-title">강아지 정보가 더 필요해요</div>
+          <div class="agent-answer" id="infoQuestion">질문</div>
+          <div class="row-inline" style="margin-top:8px; gap:10px;">
+            <input id="infoAnswerText" placeholder="답변을 입력하세요" style="flex:1;height:36px;border-radius:10px;border:1px solid var(--border);background:#0f1115;color:var(--text);padding:0 10px;" />
+            <label class="row-inline" style="gap:6px;display:none;" id="infoAnswerBoolWrap"><input type="checkbox" id="infoAnswerBool" /> 예/아니오</label>
+            <button id="infoSaveBtn">저장</button>
+            <button id="infoSkipBtn" style="background:#444;">다음</button>
+            <button id="infoAutoBtn" class="badge" style="height:36px;">히스토리로 자동 채움</button>
+          </div>
+          <div class="meta" id="infoMeta"></div>
+        </div>
+      </div>
+      <div id="chat" class="chat"></div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <div class="composer-inner">
+      <textarea id="input" placeholder="질문을 입력하세요. 예) 우리 아이가 요즘 밥을 잘 안 먹어요"></textarea>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;justify-content:flex-end;">
+        <button id="send">전송</button>
+        <div id="typing" class="typing" style="display:none;">전문가들이 검토 중...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_ROOT = (localStorage.getItem('api_base') || 'http://127.0.0.1:8000');
+    const API_URL = API_ROOT + '/v1/api/message';
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const send = document.getElementById('send');
+    const typing = document.getElementById('typing');
+
+    // Settings Window + Launcher
+    const settingsWindow = document.createElement('div');
+    settingsWindow.className = 'settings-window';
+    settingsWindow.innerHTML = `
+      <div class="settings-header"><span class="title">계정 / 강아지 설정</span><button id="settingsClose" class="settings-close">✕</button></div>
+      <div class="settings-body">
+        <div class="settings">
+          <div class="grid">
+            <div>
+              <label>사용자 선택</label>
+              <select id="userSelect"></select>
+            </div>
+            <div class="row-inline" style="align-items: end;">
+              <input id="newUsername" placeholder="새 사용자 이름 (옵션)" />
+              <button id="createUserBtn">사용자 생성</button>
+            </div>
+            <div>
+              <label>강아지 선택</label>
+              <select id="dogSelect"></select>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="grid-2">
+            <div>
+              <label>이름</label>
+              <input id="dogName" placeholder="예: 콩이" />
+            </div>
+            <div>
+              <label>견종</label>
+              <input id="dogBreed" placeholder="예: 푸들" />
+            </div>
+            <div>
+              <label>생년월일</label>
+              <input id="dogBirth" type="date" />
+            </div>
+            <div>
+              <label>성별</label>
+              <select id="dogSex">
+                <option value="unknown">모름</option>
+                <option value="male">수컷</option>
+                <option value="female">암컷</option>
+              </select>
+            </div>
+            <div class="row-inline">
+              <label>중성화</label>
+              <input id="dogNeutered" type="checkbox" />
+            </div>
+            <div>
+              <label>체중(kg)</label>
+              <input id="dogWeight" type="number" step="0.1" min="0" placeholder="예: 4.2" />
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="row-inline" style="justify-content: flex-end;">
+            <button id="createDogBtn">강아지 등록</button>
+            <button id="loadHistoryBtn">히스토리 불러오기</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(settingsWindow);
+    const settingsLauncher = document.createElement('button');
+    settingsLauncher.className = 'settings-launcher';
+    settingsLauncher.title = '설정';
+    settingsLauncher.textContent = '⚙️';
+    document.body.appendChild(settingsLauncher);
+    const settingsCloseBtn = document.getElementById('settingsClose');
+    settingsLauncher.addEventListener('click', () => { settingsWindow.style.display = 'block'; });
+    settingsCloseBtn.addEventListener('click', () => { settingsWindow.style.display = 'none'; });
+    // drag move
+    (function enableDrag(win){
+      const header = win.querySelector('.settings-header');
+      let dragging = false, offX = 0, offY = 0;
+      header.addEventListener('mousedown', (e)=>{
+        dragging = true; const rect = win.getBoundingClientRect(); offX = e.clientX - rect.left; offY = e.clientY - rect.top; e.preventDefault();
+      });
+      window.addEventListener('mousemove', (e)=>{
+        if (!dragging) return; win.style.right=''; win.style.bottom=''; win.style.left = (e.clientX - offX) + 'px'; win.style.top = (e.clientY - offY) + 'px';
+      });
+      window.addEventListener('mouseup', ()=>{ dragging = false; });
+    })(settingsWindow);
+    const userSelect = document.getElementById('userSelect');
+    const dogSelect = document.getElementById('dogSelect');
+    const newUsername = document.getElementById('newUsername');
+    const createUserBtn = document.getElementById('createUserBtn');
+    const createDogBtn = document.getElementById('createDogBtn');
+    const loadHistoryBtn = document.getElementById('loadHistoryBtn');
+    const dogName = document.getElementById('dogName');
+    const dogBreed = document.getElementById('dogBreed');
+    const dogBirth = document.getElementById('dogBirth');
+    const dogSex = document.getElementById('dogSex');
+    const dogNeutered = document.getElementById('dogNeutered');
+    const dogWeight = document.getElementById('dogWeight');
+    // info panel
+    const infoPanel = document.getElementById('infoPanel');
+    const infoQuestion = document.getElementById('infoQuestion');
+    const infoAnswerText = document.getElementById('infoAnswerText');
+    const infoAnswerBool = document.getElementById('infoAnswerBool');
+    const infoAnswerBoolWrap = document.getElementById('infoAnswerBoolWrap');
+    const infoSaveBtn = document.getElementById('infoSaveBtn');
+    const infoSkipBtn = document.getElementById('infoSkipBtn');
+    const infoAutoBtn = document.getElementById('infoAutoBtn');
+    let infoCurrent = null; // {key, question, question_type}
+
+    function getSelectedUserId() {
+      return Number(userSelect.value || localStorage.getItem('selected_user_id') || 0) || 0;
+    }
+    function getSelectedDogId() {
+      return Number(dogSelect.value || localStorage.getItem('selected_dog_id') || 0) || 0;
+    }
+    function setSelectedUserId(id) {
+      if (id) localStorage.setItem('selected_user_id', String(id));
+    }
+    function setSelectedDogId(id) {
+      if (id) localStorage.setItem('selected_dog_id', String(id));
+    }
+
+    async function api(path, options={}) {
+      const res = await fetch(API_ROOT + path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      if (!res.ok) {
+        let message = 'API Error';
+        try {
+          const d = await res.json();
+          const detail = d?.detail ?? d;
+          if (typeof detail === 'string') {
+            message = detail;
+          } else if (Array.isArray(detail)) {
+            message = detail.map(e => e?.msg || JSON.stringify(e)).join('; ');
+          } else {
+            message = JSON.stringify(detail);
+          }
+        } catch {}
+        throw new Error(message);
+      }
+      if (res.status === 204) return null;
+      return await res.json();
+    }
+
+    async function loadUsers() {
+      const data = await api('/v1/users?limit=500');
+      userSelect.innerHTML = '';
+      for (const u of data) {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = u.username ? `${u.username} (#${u.id})` : `user#${u.id}`;
+        userSelect.appendChild(opt);
+      }
+      const stored = Number(localStorage.getItem('selected_user_id')||0);
+      if (stored) userSelect.value = String(stored);
+      await loadDogs();
+    }
+
+    async function loadDogs() {
+      const userId = getSelectedUserId();
+      dogSelect.innerHTML = '';
+      if (!userId) return;
+      const dogs = await api(`/v1/users/${userId}/dogs`);
+      for (const d of dogs) {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = `${d.name} (#${d.id})`;
+        dogSelect.appendChild(opt);
+      }
+      const storedDog = Number(localStorage.getItem('selected_dog_id')||0);
+      if (storedDog) dogSelect.value = String(storedDog);
+      const dogId = getSelectedDogId();
+      if (dogId) { try { await api(`/v1/dogs/${dogId}/info/init`, { method: 'POST' }); await fetchRandomInfoQuestion(); } catch {} }
+    }
+
+    createUserBtn.addEventListener('click', async () => {
+      const username = newUsername.value.trim() || null;
+      try {
+        const u = await api('/v1/users', { method: 'POST', body: JSON.stringify({ username }) });
+        newUsername.value = '';
+        await loadUsers();
+        userSelect.value = String(u.id);
+        setSelectedUserId(u.id);
+      } catch (e) {
+        alert(e.message || '사용자 생성 실패');
+      }
+    });
+
+    userSelect.addEventListener('change', async () => {
+      const id = Number(userSelect.value || 0);
+      setSelectedUserId(id);
+      await loadDogs();
+    });
+
+    dogSelect.addEventListener('change', () => {
+      const id = Number(dogSelect.value || 0);
+      setSelectedDogId(id);
+      infoCurrent = null; hideInfoPanel(); fetchRandomInfoQuestion().catch(()=>{});
+    });
+
+    createDogBtn.addEventListener('click', async () => {
+      const userId = getSelectedUserId();
+      if (!userId) { alert('먼저 사용자부터 선택/생성하세요.'); return; }
+      const body = {
+        user_id: userId,
+        name: dogName.value.trim(),
+        breed: dogBreed.value.trim() || null,
+        birth_date: dogBirth.value || null,
+        sex: dogSex.value,
+        neutered: !!dogNeutered.checked,
+        weight_kg: dogWeight.value ? Number(dogWeight.value) : null,
+      };
+      if (!body.name) { alert('강아지 이름을 입력하세요.'); return; }
+      const d = await api('/v1/dogs', { method: 'POST', body: JSON.stringify(body) });
+      await loadDogs();
+      dogSelect.value = String(d.id);
+      setSelectedDogId(d.id);
+      dogName.value=''; dogBreed.value=''; dogBirth.value=''; dogSex.value='unknown'; dogNeutered.checked=false; dogWeight.value='';
+      try { await api(`/v1/dogs/${d.id}/info/init`, { method: 'POST' }); await fetchRandomInfoQuestion(); } catch {}
+    });
+
+    loadHistoryBtn.addEventListener('click', async () => {
+      const dogId = getSelectedDogId();
+      if (!dogId) { alert('먼저 강아지를 선택하세요.'); return; }
+      await loadHistory(dogId);
+    });
+
+    function getSessionId() {
+      let s = localStorage.getItem('session_id');
+      if (!s) { s = self.crypto?.randomUUID?.() || String(Date.now()); localStorage.setItem('session_id', s); }
+      return s;
+    }
+
+    function el(tag, attrs={}, children=[]) {
+      const e = document.createElement(tag);
+      for (const [k,v] of Object.entries(attrs)) {
+        if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else e.setAttribute(k, v);
+      }
+      for (const c of children) e.appendChild(c);
+      return e;
+    }
+
+    function addUserBubble(text) {
+      const row = el('div', { class: 'row user' });
+      const bubble = el('div', { class: 'bubble user', text });
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addAssistantBubble(text, agent) {
+      const row = el('div', { class: 'row' });
+      const avatar = el('div', { class: 'avatar ' + colorClass(agent) }, [document.createTextNode(iconFor(agent))]);
+      const bubble = el('div', { class: 'bubble', text });
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function iconFor(agent) {
+      if (agent === 'veterinarian') return '🩺';
+      if (agent === 'behavior') return '🎯';
+      if (agent === 'nutrition') return '🥣';
+      if (agent === 'report') return '📄';
+      return '🤖';
+    }
+
+    function colorClass(agent) {
+      if (agent === 'veterinarian') return 'vet';
+      if (agent === 'behavior') return 'beh';
+      if (agent === 'nutrition') return 'nut';
+      if (agent === 'report') return 'rep';
+      return '';
+    }
+
+    function renderResults(results, tasks) {
+      if (!Array.isArray(results) || results.length === 0) return;
+      const group = el('div', { class: 'agent-group' });
+      for (const r of results) {
+        const agent = r.agent || 'unknown';
+        const avatar = el('div', { class: 'avatar ' + colorClass(agent) }, [document.createTextNode(iconFor(agent))]);
+        const title = el('div', { class: 'agent-title ' + colorClass(agent), text: agentLabel(agent) });
+        const answer = el('div', { class: 'agent-answer', text: r.answer || '' });
+        const meta = el('div', { class: 'meta', text: metaText(r) });
+        const right = el('div', {}, [title, answer, meta]);
+        const card = el('div', { class: 'agent-card' }, [avatar, right]);
+        group.appendChild(card);
+      }
+      const row = el('div', { class: 'row' }, [group]);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function agentLabel(agent) {
+      if (agent === 'veterinarian') return '수의사 에이전트';
+      if (agent === 'behavior') return '행동 교정 에이전트';
+      if (agent === 'nutrition') return '영양학 에이전트';
+      if (agent === 'report') return '보고서 작성 에이전트';
+      return agent;
+    }
+
+    function metaText(r) {
+      const ms = r.duration_ms ? `${r.duration_ms.toFixed(0)}ms` : '';
+      const when = r.started_at ? new Date(r.started_at * 1000).toLocaleTimeString() : '';
+      const parts = [];
+      if (when) parts.push(when);
+      if (ms) parts.push(ms);
+      return parts.join(' · ');
+    }
+
+    async function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+      const dogId = getSelectedDogId();
+      if (!dogId) { alert('먼저 강아지를 선택/등록하세요.'); return; }
+      addUserBubble(message);
+      input.value = '';
+      send.disabled = true; typing.style.display = 'block';
+      try {
+        // 1) 사용자 메시지 저장
+        await api(`/v1/dogs/${dogId}/chat/messages`, { method: 'POST', body: JSON.stringify({ role: 'user', content: message }) });
+        // 2) 히스토리 기반 자동 채움 선 실행 (최신 dog_info를 에이전트 컨텍스트에 반영)
+        try {
+          const preUpdated = await api(`/v1/dogs/${dogId}/info/auto-fill-from-history`, { method: 'POST' });
+          if (Array.isArray(preUpdated) && preUpdated.length > 0) {
+            const labels = preUpdated.map(u => `${u.category}:${u.key}`).slice(0, 3).join(', ');
+            const more = preUpdated.length > 3 ? ` 외 ${preUpdated.length - 3}건` : '';
+            const row = el('div', { class: 'row' }, [
+              el('div', { class: 'bubble', text: `정보 자동 업데이트 ${preUpdated.length}건${labels ? `: ${labels}` : ''}${more}` })
+            ]);
+            row.style.opacity = '0.8';
+            row.style.fontSize = '12px';
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+          }
+        } catch {}
+        // 3) 에이전트 응답 생성 요청
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, session_id: getSessionId(), dog_id: dogId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.detail || 'API Error');
+        renderResults(data.results || [], data.tasks || []);
+        // 메시지 후 가끔 질문 띄우기
+        if (Math.random() < 0.6) { try { await fetchRandomInfoQuestion(); } catch {} }
+        // 4) 에이전트별 응답 저장 및 말풍선 출력
+        const results = Array.isArray(data.results) ? data.results : [];
+        const saves = [];
+        for (const r of results) {
+          const agent = r.agent || 'assistant';
+          const text = r.answer || '';
+          if (text) {
+            addAssistantBubble(text, agent);
+            saves.push(api(`/v1/dogs/${dogId}/chat/messages`, {
+              method: 'POST',
+              body: JSON.stringify({ role: 'assistant', content: text, agent })
+            }));
+          }
+        }
+        await Promise.allSettled(saves);
+        // 5) 히스토리 기반 자동 채움 후속 실행
+        try {
+          const updated = await api(`/v1/dogs/${dogId}/info/auto-fill-from-history`, { method: 'POST' });
+          if (Array.isArray(updated) && updated.length > 0) {
+            const labels = updated.map(u => `${u.category}:${u.key}`).slice(0, 3).join(', ');
+            const more = updated.length > 3 ? ` 외 ${updated.length - 3}건` : '';
+            const row = el('div', { class: 'row' }, [
+              el('div', { class: 'bubble', text: `정보 자동 업데이트 ${updated.length}건${labels ? `: ${labels}` : ''}${more}` })
+            ]);
+            row.style.opacity = '0.8';
+            row.style.fontSize = '12px';
+            chat.appendChild(row);
+            chat.scrollTop = chat.scrollHeight;
+          }
+        } catch {}
+      } catch (e) {
+        const row = el('div', { class: 'row' }, [
+          el('div', { class: 'bubble', text: `오류: ${e.message || e}` })
+        ]);
+        chat.appendChild(row);
+      } finally {
+        send.disabled = false; typing.style.display = 'none';
+      }
+    }
+
+    send.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    // 웰컴 메시지
+    (function welcome(){
+      const row = el('div', { class: 'row' }, [
+        el('div', { class: 'bubble', text: '반갑습니다! 질문을 입력하면 각 전문가 에이전트가 검토해 답변을 드려요.' })
+      ]);
+      chat.appendChild(row);
+    })();
+
+    async function loadHistory(dogId) {
+      chat.innerHTML = '';
+      try {
+        const msgs = await api(`/v1/dogs/${dogId}/chat/messages?limit=500`);
+        for (const m of msgs) {
+          if (m.role === 'user') addUserBubble(m.content);
+          else addAssistantBubble(m.content, m.agent || 'assistant');
+        }
+      } catch (e) {
+        const row = el('div', { class: 'row' }, [
+          el('div', { class: 'bubble', text: `히스토리 로드 오류: ${e.message || e}` })
+        ]);
+        chat.appendChild(row);
+      }
+    }
+
+    function showInfoPanel(question, type, meta) {
+      infoPanel.style.display = 'grid';
+      infoQuestion.textContent = question;
+      infoMeta.textContent = meta || '';
+      infoAnswerText.style.display = type === 'text' ? 'block' : 'none';
+      infoAnswerBoolWrap.style.display = type === 'boolean' ? 'flex' : 'none';
+      infoAnswerText.value = '';
+      infoAnswerBool.checked = false;
+    }
+    function hideInfoPanel() {
+      infoPanel.style.display = 'none';
+    }
+    async function fetchRandomInfoQuestion() {
+      const dogId = getSelectedDogId();
+      if (!dogId) { hideInfoPanel(); return; }
+      try {
+        const q = await api(`/v1/dogs/${dogId}/info/random-unanswered`);
+        infoCurrent = q; // {category,key,question,question_type}
+        showInfoPanel(q.question, q.question_type, `${q.category} · ${q.key}`);
+      } catch (e) {
+        hideInfoPanel();
+      }
+    }
+    infoSaveBtn.addEventListener('click', async () => {
+      if (!infoCurrent) return;
+      const dogId = getSelectedDogId();
+      const type = infoCurrent.question_type;
+      let answer = '';
+      if (type === 'text') answer = infoAnswerText.value.trim();
+      else answer = infoAnswerBool.checked ? 'true' : 'false';
+      if (!answer && type === 'text') { alert('답변을 입력하세요.'); return; }
+      try {
+        await api(`/v1/dogs/${dogId}/info/${encodeURIComponent(infoCurrent.key)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ answer, source: 'user' })
+        });
+        await fetchRandomInfoQuestion();
+      } catch (e) {
+        alert(e.message || '저장 실패');
+      }
+    });
+    infoSkipBtn.addEventListener('click', () => { fetchRandomInfoQuestion().catch(()=>{}); });
+    infoAutoBtn.addEventListener('click', async () => {
+      const dogId = getSelectedDogId();
+      try {
+        await api(`/v1/dogs/${dogId}/info/auto-fill-from-history`, { method: 'POST' });
+        await fetchRandomInfoQuestion();
+      } catch (e) { alert(e.message || '자동 채움 실패'); }
+    });
+
+    // 초기 로딩
+    (async function init(){
+      try { await loadUsers(); } catch {}
+      const dogId = getSelectedDogId();
+      if (dogId) { try { await loadHistory(dogId); } catch {} }
+    })();
+  </script>
+</body>
+</html>
+
