@@ -104,6 +104,19 @@ export interface MultiAgentResponse {
   results: AgentResult[];
 }
 
+// Dog Info Types
+export interface DogInfoRandomQuestion {
+  category: string;
+  key: string;
+  question: string;
+  question_type: 'boolean' | 'text';
+}
+
+export interface DogInfoAnswerUpdate {
+  answer: string;
+  source?: string;
+}
+
 // API 호출 헬퍼 함수들
 export const api = {
   signup: async (username: string, password: string) => {
@@ -212,4 +225,57 @@ export const api = {
       }
     );
   },
+
+    // Dog Info - Proactive Questions
+  getRandomUnansweredQuestion: async (dogId: number) => {
+    return apiRequest<DogInfoRandomQuestion>(
+      `/v1/dogs/${dogId}/info/random-unanswered`,
+      {
+        method: 'GET',
+        requiresAuth: true,
+      }
+    );
+  },
+
+  // Dog Info - Auto-fill from history
+  autoFillDogInfoFromHistory: async (dogId: number) => {
+    return apiRequest<Array<{ category: string; key: string; value: string }>>(
+      `/v1/dogs/${dogId}/info/auto-fill-from-history`,
+      {
+        method: 'POST',
+        requiresAuth: true,
+      }
+    );
+  },
+
+  // Dog Info - Save answer
+  saveDogInfoAnswer: async (dogId: number, key: string, answer: string, source = 'user') => {
+    const payload: DogInfoAnswerUpdate = {
+      answer,
+      source,
+    };
+    return apiRequest<void>(
+      `/v1/dogs/${dogId}/info/${key}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      }
+    );
+  },
+
+  // Reports (Markdown/PDF)
+  createReportMarkdown: async (dogId: number) => {
+    return apiRequest<{ ok: boolean; filename: string; url_md: string; url_pdf: string }>(
+      `/v1/dogs/${dogId}/reports/md`,
+      { method: 'POST', requiresAuth: true }
+    );
+  },
+
+  listReports: async (dogId: number) => {
+    return apiRequest<Array<{ filename: string; url_md: string; url_pdf: string; modified: number }>>(
+      `/v1/dogs/${dogId}/reports`,
+      { method: 'GET', requiresAuth: true }
+    );
+  }
 };
