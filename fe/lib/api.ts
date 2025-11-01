@@ -115,9 +115,9 @@ export const api = {
   },
 
   // Dog Management
-  getDogs: async (userId: number) => {
+  getDogs: async (username: string) => {
     return apiRequest<Dog[]>(
-      `/v1/users/${userId}/dogs`,
+      `/v1/users/${username}/dogs`,
       {
         method: 'GET',
         requiresAuth: true,

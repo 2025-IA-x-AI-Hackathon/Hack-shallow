@@ -15,13 +15,13 @@ function ChatInterface() {
   useEffect(() => {
     const initialize = async () => {
       // 인증되지 않은 경우 로그인 페이지로 이동
-      if (!authStore.isAuthenticated || !authStore.user) {
+      if (!authStore.isAuthenticated || !authStore.username) {
         router.push('/login');
         return;
       }
 
       // 강아지 목록 로드
-      await chatStore.loadDogs(Number(authStore.user.id));
+      await chatStore.loadDogs(authStore.username);
 
       // 첫 번째 강아지가 자동 선택되면 메시지 로드
       if (chatStore.currentDogId) {
@@ -60,7 +60,7 @@ function ChatInterface() {
           <div className="text-center">
             <p className="text-destructive mb-4">{chatStore.error}</p>
             <button
-              onClick={() => authStore.user && chatStore.loadDogs(Number(authStore.user.id))}
+              onClick={() => authStore.username && chatStore.loadDogs(authStore.username)}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
               다시 시도

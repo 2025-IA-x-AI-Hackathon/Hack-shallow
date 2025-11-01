@@ -12,11 +12,11 @@ class ChatStore {
     makeAutoObservable(this);
   }
 
-  async loadDogs(userId: number) {
+  async loadDogs(username: string) {
     this.setLoading(true);
     this.error = null;
     try {
-      const dogs = await api.getDogs(userId);
+      const dogs = await api.getDogs(username);
       runInAction(() => {
         this.dogs = dogs;
         // 첫 번째 강아지 자동 선택
