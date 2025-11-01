@@ -4,7 +4,7 @@ ENV_FILE     ?= .env
 PORT         ?= 8000
 MESSAGE      ?= 안녕하세요
 
-.PHONY: help venv install run run-dev docker-build docker-run docker-run-dev docker-stop docker-rebuild clean call front
+.PHONY: help venv install run run-dev docker-build docker-run docker-run-dev docker-stop docker-rebuild clean call front ingest-nutrition ingest-veterinarian ingest-behavior
 
 help:
 	@echo "Available targets:"
@@ -20,6 +20,9 @@ help:
 	@echo "  clean           - Remove .venv and __pycache__"
 	@echo "  call            - Sample curl call to /v1/api/message"
 	@echo "  front           - Open test frontend (frontend.html)"
+	@echo "  ingest-nutrition- Ingest PDFs under data/nutrition into Chroma"
+	@echo "  ingest-veterinarian - Ingest JSONs under data/veterinarian into Chroma"
+	@echo "  ingest-behavior - Ingest PDFs under data/behavior into Chroma"
 
 venv:
 	python3 -m venv .venv
@@ -64,4 +67,16 @@ call:
 front:
 	@echo "Opening frontend.html..."
 	@open frontend.html
+
+ingest-nutrition:
+	@[ -d ./data/nutrition ] || (echo "./data/nutrition not found" && exit 1)
+	../.venv/bin/python -m scripts.ingest_nutrition --data-dir ./data/nutrition
+
+ingest-veterinarian:
+	@[ -d ./data/veterinarian ] || (echo "./data/veterinarian not found" && exit 1)
+	../.venv/bin/python -m scripts.ingest_veterinarian --data-dir ./data/veterinarian
+
+ingest-behavior:
+	@[ -d ./data/behavior ] || (echo "./data/behavior not found" && exit 1)
+	../.venv/bin/python -m scripts.ingest_behavior --data-dir ./data/behavior
 

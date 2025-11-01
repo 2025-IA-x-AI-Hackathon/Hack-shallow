@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", validation_alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", validation_alias="OPENAI_MODEL")
     embeddings_model: str = Field(
-        default="text-embedding-3-small", validation_alias="EMBEDDINGS_MODEL"
+        default="text-embedding-3-large", validation_alias="EMBEDDINGS_MODEL"
     )
     agents: Union[str, List[str]] = Field(
         default_factory=lambda: ["veterinarian", "behavior", "nutrition", "report"],
@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     )
     temperature: float = Field(default=0.2, validation_alias="TEMPERATURE")
     max_subtasks: int = Field(default=4, validation_alias="MAX_SUBTASKS")
+    chroma_persist_dir: str = Field(default="storage/chroma", validation_alias="CHROMA_PERSIST_DIR")
 
     # JWT 설정
     JWT_SECRET_KEY: str = Field(default="your-secret-key-change-this-in-production", validation_alias="JWT_SECRET_KEY")

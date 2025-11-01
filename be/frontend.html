@@ -181,7 +181,8 @@
   </div>
 
   <script>
-    const API_ROOT = (localStorage.getItem('api_base') || 'https://shallow-mind-be.hyki.me');
+    // const API_ROOT = (localStorage.getItem('api_base') || 'https://shallow-mind-be.hyki.me');
+    const API_ROOT = (localStorage.getItem('api_base') || 'http://127.0.0.1:8000');
     const API_URL = API_ROOT + '/v1/api/message';
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');

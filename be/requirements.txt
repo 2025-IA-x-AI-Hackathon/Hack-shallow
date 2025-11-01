@@ -69,3 +69,5 @@ websockets==15.0.1
 xxhash==3.6.0
 yarl==1.22.0
 zstandard==0.25.0
+chromadb==0.5.18
+pypdf==4.3.1

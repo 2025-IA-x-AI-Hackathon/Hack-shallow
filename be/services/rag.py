@@ -1,47 +1,44 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-from langchain_core.documents import Document
+from langchain_community.vectorstores import Chroma
+from langchain_core.vectorstores import VectorStoreRetriever
 
 from core.config import get_settings, Settings
-
-
-class StubRetriever:
-    """벡터DB 구축 전까지 사용하는 스텁 리트리버.
-
-    invoke(question: str) -> List[Document]
-    """
-
-    def __init__(self, agent_name: str) -> None:
-        self.agent_name = agent_name
-
-    def invoke(self, question: str) -> List[Document]:
-        # 실제 구현에서는 agent_name 별 vector store에서 검색
-        # 예: retriever.get_relevant_documents(question)
-        return [
-            Document(
-                page_content=(
-                    f"[{self.agent_name}] 현재는 벡터DB 미구축 상태의 스텁 컨텍스트입니다. "
-                    f"질문: {question}"
-                )
-            )
-        ]
+from services.llm import get_embeddings_model
 
 
 class AgentIndexRegistry:
+    """에이전트별로 분리된 Chroma 컬렉션을 관리하고 retriever를 제공합니다.
+
+    - 컬렉션 네임: agent 이름 그대로 사용 (e.g. "veterinarian", "behavior", "nutrition")
+    - 퍼시스트 경로: settings.chroma_persist_dir
+    - 임베딩: OpenAIEmbeddings (services.llm.get_embeddings_model)
+    """
+
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings or get_settings()
-        self._retrievers: Dict[str, StubRetriever] = {}
+        self._retrievers: Dict[str, VectorStoreRetriever] = {}
         self._ensure_retrievers()
+
+    def _build_retriever(self, agent_name: str) -> VectorStoreRetriever:
+        embeddings = get_embeddings_model(self.settings)
+        vs = Chroma(
+            collection_name=agent_name,
+            persist_directory=self.settings.chroma_persist_dir,
+            embedding_function=embeddings,
+        )
+        # 기본 k 값은 필요시 환경설정으로 확장 가능
+        return vs.as_retriever(search_kwargs={"k": 4})
 
     def _ensure_retrievers(self) -> None:
         for agent in self.settings.agents:
-            self._retrievers[agent] = StubRetriever(agent)
+            self._retrievers[agent] = self._build_retriever(agent)
 
-    def get_retriever(self, agent: str):
+    def get_retriever(self, agent: str) -> VectorStoreRetriever:
         if agent not in self._retrievers:
-            self._retrievers[agent] = StubRetriever(agent)
+            self._retrievers[agent] = self._build_retriever(agent)
         return self._retrievers[agent]
 
 

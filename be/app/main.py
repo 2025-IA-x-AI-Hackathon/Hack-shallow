@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from api.request import MessageRequest
 from api.response import MessageResponse
@@ -17,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from contextlib import asynccontextmanager
+import traceback
 
 
 @asynccontextmanager
@@ -37,6 +40,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 정적 파일 서빙 (테스트용 JSON 등): /static/ 경로로 be/ 디렉터리 노출
+app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parents[1])), name="static")
 
 
 @app.post("/v1/api/message", response_model=MessageResponse)
@@ -84,6 +90,8 @@ async def message_endpoint(body: MessageRequest, session: AsyncSession = Depends
             results=result.get("results"),
         )
     except Exception as e:
+        # 서버 콘솔에 전체 스택 출력 (원인 파악용)
+        print("[message_endpoint] ERROR:\n" + traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

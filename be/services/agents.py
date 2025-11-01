@@ -18,6 +18,58 @@ def _format_docs(docs) -> str:
     return "\n\n".join(d.page_content for d in docs)
 
 
+def _display_source(metadata: Dict[str, Any]) -> str:
+    """출처 문자열 구성.
+    - veterinarian: title, author, publisher 우선
+    - 그 외: source 또는 file_path
+    """
+    agent = (metadata or {}).get("agent")
+    if agent == "veterinarian":
+        title = (metadata or {}).get("title") or ""
+        author = (metadata or {}).get("author") or ""
+        publisher = (metadata or {}).get("publisher") or ""
+        parts = []
+        if title:
+            parts.append(str(title))
+        tail = " / ".join([p for p in [str(author) if author else "", str(publisher) if publisher else ""] if p])
+        if tail:
+            parts.append(tail)
+        if parts:
+            return " — ".join(parts)
+    # fallback
+    return metadata.get("source") or metadata.get("file_path") or "(unknown)"
+
+
+def _format_sources(docs) -> str:
+    # 고유 출처 목록 정리 (에이전트별 표현 규칙 반영)
+    sources = []
+    seen = set()
+    for d in docs:
+        md = getattr(d, "metadata", {}) or {}
+        label = _display_source(md)
+        if not label:
+            continue
+        if label not in seen:
+            seen.add(label)
+            sources.append(label)
+    return "\n".join(sources) if sources else "(출처 정보 없음)"
+
+
+def _docs_for_trace(docs, snippet_len: int = 200):
+    items = []
+    for d in docs or []:
+        md = getattr(d, "metadata", {}) or {}
+        label = _display_source(md)
+        page = md.get("page")
+        text = getattr(d, "page_content", "") or ""
+        items.append({
+            "source": label,
+            "page": int(page) if isinstance(page, int) or (isinstance(page, str) and page.isdigit()) else page,
+            "snippet": text[:snippet_len],
+        })
+    return items
+
+
 def _format_dog_profile(dog: Optional[Dict[str, Any]]) -> str:
     if not dog:
         return "(강아지 정보 없음)"
@@ -76,8 +128,9 @@ class RAGAgent:
                     "1) 강아지 프로필\n{dog_profile}\n\n"
                     "2) 저장된 강아지 정보 항목\n{dog_info_items}\n\n"
                     "3) 검색 컨텍스트\n{context}\n\n"
+                    "4) 컨텍스트 출처(파일 경로/이름)\n{sources}\n\n"
                     "- 프로필과 컨텍스트에 없는 내용은 추측하지 말고 모른다고 답하세요.\n"
-                    "- 가능한 간결하고 정확하게 한국어로 답하세요.",
+                    "- 가능한 간결하고 정확하게 한국어로 답하세요.\n"
                 ),
                 ("human", "질문: {question}"),
             ]
@@ -86,21 +139,27 @@ class RAGAgent:
             {
                 "question": lambda x: x["question"],
                 "agent_name": lambda x: self.name,
-                # 검색 컨텍스트: 질문으로 검색
-                "context": (lambda x: _format_docs(self.retriever.invoke(x["question"]))),
-                # 강아지 프로필: 태스크에 포함된 dog dict 포맷팅
+                # docs가 주어지면 사용, 없으면 retriever 호출
+                "docs": lambda x: x.get("docs") if x.get("docs") is not None else self.retriever.invoke(x["question"]),
+                # 강아지 프로필/세부정보 포맷팅
                 "dog_profile": (lambda x: _format_dog_profile(x.get("dog"))),
-                # 강아지 세부 정보 항목
                 "dog_info_items": (lambda x: _format_dog_info_items(x.get("dog"))),
             }
+            | RunnablePassthrough.assign(
+                context=lambda x: _format_docs(x["docs"]),
+                sources=lambda x: _format_sources(x["docs"]),
+            )
             | prompt
             | self.llm
             | StrOutputParser()
         )
 
     async def ask(self, payload: Dict[str, Any]) -> str:
+        # 미리 검색 문서를 확보해 trace에도 활용
+        docs = self.retriever.invoke(payload["question"])
         chain = self.chain()
-        return await chain.ainvoke(payload)
+        answer = await chain.ainvoke({**payload, "docs": docs})
+        return {"answer": answer, "docs": docs}
 
 
 class AgentManager:
@@ -155,10 +214,14 @@ class AgentManager:
             answer = await agent.ask({"question": question, "dog": t.get("dog")})
             duration_ms = (time.perf_counter() - t0) * 1000.0
             ended_at = time.time()
+            answer_text = answer.get("answer") if isinstance(answer, dict) else answer
+            docs = answer.get("docs") if isinstance(answer, dict) else None
+            trace_docs = _docs_for_trace(docs)
             return {
                 "agent": agent_name,
                 "question": question,
-                "answer": answer,
+                "answer": answer_text,
+                "retrieved_docs": trace_docs,
                 "duration_ms": duration_ms,
                 "started_at": started_at,
                 "ended_at": ended_at,
