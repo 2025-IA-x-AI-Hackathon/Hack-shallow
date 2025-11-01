@@ -59,8 +59,8 @@ jobs:
             echo "Create docker-compose.yml file"
             cat > docker-compose.yml << 'EOF'
             services:
-              container_name: shallow-mind-fe
               app:
+                container_name: shallow-mind-fe
                 image: ${{ vars.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}:${{ vars.DOCKER_HUB_FE_TAGNAME }}
                 ports:
                   - '42420:3000'
