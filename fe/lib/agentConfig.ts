@@ -6,7 +6,7 @@ export interface AgentConfig {
 }
 
 export const AGENTS: Record<string, AgentConfig> = {
-  veterinary: {
+  veterinarian: {
     name: '수의학 전문가',
     icon: '🩺',
     color: 'blue',
@@ -24,6 +24,12 @@ export const AGENTS: Record<string, AgentConfig> = {
     color: 'orange',
     description: '반려견의 영양과 식단 관리',
   },
+  report: {
+    name: '보고서 전문가',
+    icon: '📊',
+    color: 'purple',
+    description: '건강 데이터 요약 및 보고서 작성',
+  },
   general: {
     name: '일반 상담',
     icon: '💬',
@@ -37,4 +43,43 @@ export const getAgentConfig = (agentType: string | null): AgentConfig => {
     return AGENTS.general;
   }
   return AGENTS[agentType] || AGENTS.general;
+};
+
+// Tailwind color class mappings for agents
+export interface AgentColorClasses {
+  border: string;
+  bg: string;
+  text: string;
+}
+
+const COLOR_MAPPINGS: Record<string, AgentColorClasses> = {
+  blue: {
+    border: 'border-blue-500',
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+  },
+  green: {
+    border: 'border-green-500',
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+  },
+  orange: {
+    border: 'border-orange-500',
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+  },
+  purple: {
+    border: 'border-purple-500',
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+  },
+  gray: {
+    border: 'border-gray-500',
+    bg: 'bg-gray-50',
+    text: 'text-gray-700',
+  },
+};
+
+export const getAgentColorClasses = (color: string): AgentColorClasses => {
+  return COLOR_MAPPINGS[color] || COLOR_MAPPINGS.gray;
 };
