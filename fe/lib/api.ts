@@ -36,6 +36,16 @@ export async function apiRequest<T>(
 
 // API 호출 헬퍼 함수들
 export const api = {
+  signup: async (username: string, password: string) => {
+    return apiRequest<{ message: string }>(
+      '/auth/signup',
+      {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      }
+    );
+  },
+
   login: async (email: string, password: string) => {
     return apiRequest<{ token: string; user: { id: string; name: string; email: string } }>(
       '/auth/login',
