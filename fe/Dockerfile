@@ -12,6 +12,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Copy .env file if exists (for build-time env vars like NEXT_PUBLIC_*)
+COPY .env* ./
+
 # Build Next.js app
 RUN npm run build
 

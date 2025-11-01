@@ -17,6 +17,13 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Create .env file for build
+        run: |
+          cd fe
+          cat > .env << 'EOF'
+          ${{ secrets.FE_ENV_FILE }}
+          EOF
+
       - name: Build docker image
         run: |
           docker build -t ${{ vars.DOCKER_HUB_USERNAME }}/${{ vars.DOCKER_HUB_REPOSITORY }}:${{ vars.DOCKER_HUB_FE_TAGNAME }} ./fe
