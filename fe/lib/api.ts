@@ -12,9 +12,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const { requiresAuth = false, headers = {}, ...restOptions } = options;
 
-  const requestHeaders: HeadersInit = {
+  const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...headers,
+    ...(headers as Record<string, string>),
   };
 
   if (requiresAuth && authStore.token) {
