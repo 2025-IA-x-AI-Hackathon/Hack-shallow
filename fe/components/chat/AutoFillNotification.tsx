@@ -1,10 +1,10 @@
 'use client';
 
 import { observer } from 'mobx-react-lite';
-import { Info } from 'lucide-react';
+import { DogInfoAutoFillUpdate } from '@/lib/api';
 
 interface AutoFillNotificationProps {
-  updates: Array<{ category: string; key: string; value: string }>;
+  updates: DogInfoAutoFillUpdate[];
 }
 
 function AutoFillNotification({ updates }: AutoFillNotificationProps) {
@@ -12,25 +12,13 @@ function AutoFillNotification({ updates }: AutoFillNotificationProps) {
 
   const displayUpdates = updates.slice(0, 3);
   const remaining = updates.length - displayUpdates.length;
+  const labels = displayUpdates.map(u => `${u.category}:${u.key}`).join(', ');
 
   return (
-    <div className="flex justify-center my-2">
-      <div className="max-w-[80%] px-4 py-3 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 animate-fade-in">
-        <div className="flex items-start gap-2">
-          <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium mb-1">강아지 정보 자동 업데이트 {updates.length}건</p>
-            <div className="text-xs opacity-90 space-y-0.5">
-              {displayUpdates.map((update, index) => (
-                <div key={index}>
-                  {update.category}:{update.key}
-                </div>
-              ))}
-              {remaining > 0 && <div>외 {remaining}건</div>}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="text-xs text-muted-foreground/70 mt-1">
+      정보 {updates.length}건 업데이트됨
+      {labels && `: ${labels}`}
+      {remaining > 0 && ` 외 ${remaining}건`}
     </div>
   );
 }

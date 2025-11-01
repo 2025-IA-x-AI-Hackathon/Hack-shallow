@@ -56,30 +56,36 @@ function MessageList() {
         </div>
       ) : (
         <>
-          {/* Auto-fill Notification */}
-          {chatStore.autoFillUpdates.length > 0 && (
-            <AutoFillNotification updates={chatStore.autoFillUpdates} />
-          )}
-
           {messageGroups.map((group, groupIndex) => {
             if (group.type === 'user') {
               // 사용자 메시지는 개별적으로 표시 (프로필 아이콘 포함)
-              return group.messages.map((message) => (
-                <div key={message.id} className="flex justify-end mb-4 gap-2">
-                  <div className="max-w-[70%] px-4 py-2 rounded-lg bg-primary text-primary-foreground">
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <span className="text-xs opacity-80 mt-1 block">
-                      {new Date(message.created_at).toLocaleTimeString('ko-KR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+              return group.messages.map((message, messageIndex) => {
+                const isLastUserMessage = messageIndex === group.messages.length - 1;
+                return (
+                  <div key={message.id}>
+                    <div className="flex justify-end mb-4 gap-2">
+                      <div className="max-w-[70%] px-4 py-2 rounded-lg bg-primary text-primary-foreground">
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                        <span className="text-xs opacity-80 mt-1 block">
+                          {new Date(message.created_at).toLocaleTimeString('ko-KR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                    </div>
+                    {/* Show auto-fill notification under the last user message */}
+                    {isLastUserMessage && chatStore.autoFillUpdates.length > 0 && (
+                      <div className="flex justify-end mb-2 mr-10">
+                        <AutoFillNotification updates={chatStore.autoFillUpdates} />
+                      </div>
+                    )}
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-primary" />
-                  </div>
-                </div>
-              ));
+                );
+              });
             } else {
               // Assistant messages - 단순 텍스트로 저장됨 (frontend.html과 동일)
               return <AgentMessageGroup key={groupIndex} messages={group.messages} />;

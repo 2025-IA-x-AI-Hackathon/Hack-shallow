@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { api, Dog, ChatMessage, AgentResult, DogInfoRandomQuestion } from '@/lib/api';
+import { api, Dog, ChatMessage, AgentResult, DogInfoRandomQuestion, DogInfoAutoFillUpdate } from '@/lib/api';
 
 export type LoadingPhase = 'analyzing' | 'routing' | 'responding' | null;
 
@@ -21,7 +21,7 @@ class ChatStore {
   proactiveQuestion: DogInfoRandomQuestion | null = null;
 
   // Auto-fill notification state
-  autoFillUpdates: Array<{ category: string; key: string; value: string }> = [];
+  autoFillUpdates: DogInfoAutoFillUpdate[] = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -85,6 +85,11 @@ class ChatStore {
     this.setLoading(true);
     this.error = null;
 
+    // 이전 자동 완성 알림 초기화
+    runInAction(() => {
+      this.autoFillUpdates = [];
+    });
+
     // 낙관적 업데이트: 사용자 메시지 UI에 즉시 추가
     const optimisticMessage: ChatMessage = {
       id: Date.now(),
@@ -125,12 +130,6 @@ class ChatStore {
           runInAction(() => {
             this.autoFillUpdates = preUpdates;
           });
-          // 3초 후 자동으로 알림 제거
-          setTimeout(() => {
-            runInAction(() => {
-              this.autoFillUpdates = [];
-            });
-          }, 3000);
         }
       } catch (error) {
         console.error('Pre auto-fill failed:', error);
@@ -206,12 +205,6 @@ class ChatStore {
           runInAction(() => {
             this.autoFillUpdates = postUpdates;
           });
-          // 3초 후 자동으로 알림 제거
-          setTimeout(() => {
-            runInAction(() => {
-              this.autoFillUpdates = [];
-            });
-          }, 3000);
         }
       } catch (error) {
         console.error('Post auto-fill failed:', error);

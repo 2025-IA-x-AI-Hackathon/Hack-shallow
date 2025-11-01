@@ -117,6 +117,18 @@ export interface DogInfoAnswerUpdate {
   source?: string;
 }
 
+export interface DogInfoAutoFillUpdate {
+  id: number;
+  dog_id: number;
+  category: string;
+  key: string;
+  question: string;
+  question_type: string;
+  answer_text: string;
+  source: string;
+  updated_at: string;
+}
+
 // API 호출 헬퍼 함수들
 export const api = {
   signup: async (username: string, password: string) => {
@@ -239,7 +251,7 @@ export const api = {
 
   // Dog Info - Auto-fill from history
   autoFillDogInfoFromHistory: async (dogId: number) => {
-    return apiRequest<Array<{ category: string; key: string; value: string }>>(
+    return apiRequest<DogInfoAutoFillUpdate[]>(
       `/v1/dogs/${dogId}/info/auto-fill-from-history`,
       {
         method: 'POST',
