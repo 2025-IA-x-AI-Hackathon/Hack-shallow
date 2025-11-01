@@ -2,6 +2,7 @@
 
 import { ChatMessage } from '@/lib/api';
 import { getAgentConfig } from '@/lib/agentConfig';
+import { SourceList } from './SourceCard';
 
 interface AgentMessageGroupProps {
   messages: ChatMessage[];
@@ -25,6 +26,12 @@ function AgentMessageGroup({ messages }: AgentMessageGroupProps) {
             </span>
           </div>
           <p className="text-foreground whitespace-pre-wrap">{message.content}</p>
+
+          {/* Retrieved Sources */}
+          {message.retrieved_docs && message.retrieved_docs.length > 0 && (
+            <SourceList sources={message.retrieved_docs} />
+          )}
+
           <span className="text-xs text-muted-foreground mt-2 block">
             {new Date(message.created_at).toLocaleTimeString('ko-KR', {
               hour: '2-digit',
@@ -57,6 +64,13 @@ function AgentMessageGroup({ messages }: AgentMessageGroupProps) {
                 <p className="text-foreground whitespace-pre-wrap pl-7">
                   {message.content}
                 </p>
+
+                {/* Retrieved Sources */}
+                {message.retrieved_docs && message.retrieved_docs.length > 0 && (
+                  <div className="pl-7 mt-2">
+                    <SourceList sources={message.retrieved_docs} />
+                  </div>
+                )}
               </div>
             );
           })}

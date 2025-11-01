@@ -7,6 +7,8 @@ import { useEffect, useRef } from 'react';
 import AgentMessageGroup from './AgentMessageGroup';
 import { MultiAgentMessageGroup } from './MultiAgentMessageGroup';
 import { LoadingIndicator } from './LoadingIndicator';
+import { ProactiveQuestion } from './ProactiveQuestion';
+import AutoFillNotification from './AutoFillNotification';
 import { User } from 'lucide-react';
 
 function MessageList() {
@@ -54,6 +56,11 @@ function MessageList() {
         </div>
       ) : (
         <>
+          {/* Auto-fill Notification */}
+          {chatStore.autoFillUpdates.length > 0 && (
+            <AutoFillNotification updates={chatStore.autoFillUpdates} />
+          )}
+
           {messageGroups.map((group, groupIndex) => {
             if (group.type === 'user') {
               // 사용자 메시지는 개별적으로 표시 (프로필 아이콘 포함)
@@ -94,6 +101,11 @@ function MessageList() {
               results={chatStore.pendingResults}
               timestamp={new Date().toISOString()}
             />
+          )}
+
+          {/* Proactive Question - 메시지 리스트 맨 아래 */}
+          {chatStore.proactiveQuestion && (
+            <ProactiveQuestion question={chatStore.proactiveQuestion} />
           )}
 
           <div ref={messagesEndRef} />

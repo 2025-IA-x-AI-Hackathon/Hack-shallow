@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import { api, Dog, ChatMessage, AgentResult } from '@/lib/api';
+import { api, Dog, ChatMessage, AgentResult, DogInfoRandomQuestion } from '@/lib/api';
 
 export type LoadingPhase = 'analyzing' | 'routing' | 'responding' | null;
 
@@ -15,6 +15,13 @@ class ChatStore {
 
   // Store multi-agent results temporarily
   pendingResults: AgentResult[] | null = null;
+
+  // Proactive question state
+  lastConversationTimestamp: number | null = null;
+  proactiveQuestion: DogInfoRandomQuestion | null = null;
+
+  // Auto-fill notification state
+  autoFillUpdates: Array<{ category: string; key: string; value: string }> = [];
 
   constructor() {
     makeAutoObservable(this);
@@ -56,6 +63,8 @@ class ChatStore {
       runInAction(() => {
         this.messages = messages;
       });
+      // Load last conversation timestamp from localStorage
+      this.loadLastConversationTimestamp();
     } catch (error) {
       runInAction(() => {
         this.error = error instanceof Error ? error.message : '메시지를 불러오는데 실패했습니다.';
@@ -108,6 +117,25 @@ class ChatStore {
         }
       });
 
+      // Step 1.5: 히스토리 기반 자동 채움 선 실행 (frontend.html의 라인 511-525와 동일)
+      // 최신 dog_info를 에이전트 컨텍스트에 반영하기 위해 메시지 전송 직후 호출
+      try {
+        const preUpdates = await api.autoFillDogInfoFromHistory(this.currentDogId);
+        if (preUpdates && preUpdates.length > 0) {
+          runInAction(() => {
+            this.autoFillUpdates = preUpdates;
+          });
+          // 3초 후 자동으로 알림 제거
+          setTimeout(() => {
+            runInAction(() => {
+              this.autoFillUpdates = [];
+            });
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Pre auto-fill failed:', error);
+      }
+
       // Phase 1: Analyzing
       await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -155,7 +183,11 @@ class ChatStore {
             'assistant',
             result.agent
           );
-          savedMessages.push(savedMsg);
+          // Add retrieved_docs to the message (in-memory only, not saved to DB)
+          savedMessages.push({
+            ...savedMsg,
+            retrieved_docs: result.retrieved_docs,
+          });
         } catch (error) {
           console.error('Failed to save agent message:', error);
         }
@@ -165,6 +197,29 @@ class ChatStore {
       runInAction(() => {
         this.messages.push(...savedMessages);
       });
+
+      // Step 4: 히스토리 기반 자동 채움 후속 실행 (frontend.html의 라인 552-566과 동일)
+      // 에이전트 응답에서 새로운 정보를 추출해 dog_info 업데이트
+      try {
+        const postUpdates = await api.autoFillDogInfoFromHistory(this.currentDogId);
+        if (postUpdates && postUpdates.length > 0) {
+          runInAction(() => {
+            this.autoFillUpdates = postUpdates;
+          });
+          // 3초 후 자동으로 알림 제거
+          setTimeout(() => {
+            runInAction(() => {
+              this.autoFillUpdates = [];
+            });
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Post auto-fill failed:', error);
+      }
+
+      // Update last conversation timestamp and clear proactive question
+      this.updateLastConversationTimestamp();
+      this.clearProactiveQuestion();
     } catch (error) {
       // 실패 시 낙관적 메시지 제거
       runInAction(() => {
@@ -196,8 +251,92 @@ class ChatStore {
     this.messages = [];
   }
 
+  clearAll() {
+    // Clear all state
+    this.messages = [];
+    this.dogs = [];
+    this.currentDogId = null;
+    this.isLoading = false;
+    this.loadingPhase = null;
+    this.activeAgents = [];
+    this.completedAgents = [];
+    this.error = null;
+    this.pendingResults = null;
+    this.lastConversationTimestamp = null;
+    this.proactiveQuestion = null;
+    this.autoFillUpdates = [];
+
+    // Clear all localStorage items for this feature
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('last_conversation_')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  }
+
   get currentDog(): Dog | null {
     return this.dogs.find(dog => dog.id === this.currentDogId) || null;
+  }
+
+  // Proactive question methods
+  private getLastConversationStorageKey(): string {
+    return `last_conversation_${this.currentDogId}`;
+  }
+
+  loadLastConversationTimestamp() {
+    if (!this.currentDogId) return;
+
+    const stored = localStorage.getItem(this.getLastConversationStorageKey());
+    if (stored) {
+      runInAction(() => {
+        this.lastConversationTimestamp = parseInt(stored, 10);
+      });
+    } else {
+      // If no timestamp exists, set it to now (first time setup)
+      this.updateLastConversationTimestamp();
+    }
+  }
+
+  updateLastConversationTimestamp() {
+    if (!this.currentDogId) return;
+
+    const now = Date.now();
+    runInAction(() => {
+      this.lastConversationTimestamp = now;
+    });
+    localStorage.setItem(this.getLastConversationStorageKey(), now.toString());
+  }
+
+  async checkAndTriggerProactiveQuestion() {
+    if (!this.currentDogId || !this.lastConversationTimestamp) return;
+
+    const THIRTY_SECONDS_MS = 30 * 1000;
+    const timeSinceLastConversation = Date.now() - this.lastConversationTimestamp;
+
+    if (timeSinceLastConversation >= THIRTY_SECONDS_MS && !this.proactiveQuestion) {
+      try {
+        const question = await api.getRandomUnansweredQuestion(this.currentDogId);
+        runInAction(() => {
+          this.proactiveQuestion = question;
+        });
+      } catch (error: any) {
+        // 404는 "모든 항목에 답변이 있습니다" - 정상 상황이므로 조용히 넘어감
+        if (error?.message?.includes('404') || error?.message?.includes('모든 항목')) {
+          // Do nothing, this is expected when all questions are answered
+          return;
+        }
+        console.error('Failed to fetch proactive question:', error);
+      }
+    }
+  }
+
+  clearProactiveQuestion() {
+    runInAction(() => {
+      this.proactiveQuestion = null;
+    });
   }
 }
 

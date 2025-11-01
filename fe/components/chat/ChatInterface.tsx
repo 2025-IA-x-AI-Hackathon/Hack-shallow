@@ -37,9 +37,32 @@ function ChatInterface() {
     initialize();
   }, [router, authStore.isHydrated]);
 
+  // Proactive question timer - check every minute
+  useEffect(() => {
+    const ONE_MINUTE_MS = 60 * 1000;
+
+    const intervalId = setInterval(() => {
+      chatStore.checkAndTriggerProactiveQuestion();
+    }, ONE_MINUTE_MS);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Check proactive question on visibility change (return to page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        chatStore.checkAndTriggerProactiveQuestion();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const handleLogout = () => {
     authStore.logout();
-    chatStore.clearMessages();
+    chatStore.clearAll();
     router.push('/login');
   };
 

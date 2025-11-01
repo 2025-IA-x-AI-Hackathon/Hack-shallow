@@ -72,6 +72,7 @@ export interface ChatMessage {
   content: string;
   agent: string | null;
   created_at: string;
+  retrieved_docs?: RetrievedDoc[]; // Optional: only present in frontend memory, not saved to DB
 }
 
 export interface ChatMessageCreate {
@@ -209,21 +210,6 @@ export const api = {
         body: JSON.stringify({ message: question, dog_id: dogId }),
         requiresAuth: true,
       }
-    );
-  },
-
-  // Reports (Markdown/PDF)
-  createReportMarkdown: async (dogId: number) => {
-    return apiRequest<{ ok: boolean; filename: string; url_md: string; url_pdf: string }>(
-      `/v1/dogs/${dogId}/reports/md`,
-      { method: 'POST', requiresAuth: true }
-    );
-  },
-
-  listReports: async (dogId: number) => {
-    return apiRequest<Array<{ filename: string; url_md: string; url_pdf: string; modified: number }>>(
-      `/v1/dogs/${dogId}/reports`,
-      { method: 'GET', requiresAuth: true }
     );
   },
 };
