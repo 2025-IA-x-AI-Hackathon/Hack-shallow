@@ -71,3 +71,5 @@ yarl==1.22.0
 zstandard==0.25.0
 chromadb==0.5.18
 pypdf==4.3.1
+markdown==3.6
+xhtml2pdf==0.2.15

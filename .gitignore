@@ -17,3 +17,4 @@
 app.db
 /be/storage
 /be/data/*
+/be/report/*

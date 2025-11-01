@@ -177,7 +177,7 @@ class ChatStore {
         this.loadingPhase = null;
         this.activeAgents = [];
         this.completedAgents = [];
-        this.pendingResults = null;
+        // pendingResults를 유지하여 사용자가 버튼을 눌러 보고서 다운로드 가능하도록 함
       });
     }
   }

@@ -211,4 +211,19 @@ export const api = {
       }
     );
   },
+
+  // Reports (Markdown/PDF)
+  createReportMarkdown: async (dogId: number) => {
+    return apiRequest<{ ok: boolean; filename: string; url_md: string; url_pdf: string }>(
+      `/v1/dogs/${dogId}/reports/md`,
+      { method: 'POST', requiresAuth: true }
+    );
+  },
+
+  listReports: async (dogId: number) => {
+    return apiRequest<Array<{ filename: string; url_md: string; url_pdf: string; modified: number }>>(
+      `/v1/dogs/${dogId}/reports`,
+      { method: 'GET', requiresAuth: true }
+    );
+  },
 };

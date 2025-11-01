@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     temperature: float = Field(default=0.2, validation_alias="TEMPERATURE")
     max_subtasks: int = Field(default=4, validation_alias="MAX_SUBTASKS")
     chroma_persist_dir: str = Field(default="storage/chroma", validation_alias="CHROMA_PERSIST_DIR")
+    reports_dir: str = Field(default="report", validation_alias="REPORTS_DIR")
 
     # JWT 설정
     JWT_SECRET_KEY: str = Field(default="your-secret-key-change-this-in-production", validation_alias="JWT_SECRET_KEY")

@@ -1,6 +1,7 @@
 'use client';
 
-import { AgentResult } from '@/lib/api';
+import { AgentResult, api } from '@/lib/api';
+import { chatStore } from '@/stores/chatStore';
 import { getAgentConfig, getAgentColorClasses } from '@/lib/agentConfig';
 import { SourceList } from './SourceCard';
 import { motion } from 'framer-motion';
@@ -36,6 +37,28 @@ export function AgentResponseCard({ result, index }: AgentResponseCardProps) {
       <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
         {result.answer}
       </div>
+
+      {/* Report Agent: Download Button */}
+      {result.agent === 'report' && (
+        <div className="mt-3">
+          <button
+            className={`px-3 py-2 rounded-md text-xs font-semibold ${colorClasses.bg}`}
+            onClick={async () => {
+              try {
+                const dogId = chatStore.currentDogId;
+                if (!dogId) return;
+                const r = await api.createReportMarkdown(dogId);
+                window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${r.url_pdf}`, '_blank');
+              } catch (e) {
+                console.error(e);
+                alert('보고서 생성 실패');
+              }
+            }}
+          >
+            보고서(PDF) 다운로드
+          </button>
+        </div>
+      )}
 
       {/* Retrieved Sources */}
       {result.retrieved_docs && result.retrieved_docs.length > 0 && (

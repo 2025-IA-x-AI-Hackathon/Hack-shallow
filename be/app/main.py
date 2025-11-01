@@ -9,6 +9,7 @@ from api.request import MessageRequest
 from api.response import MessageResponse
 from graph.flow import run_qa_flow
 from app.routers import dogs_router, chat_router
+from app.routers.reports import router as reports_router
 from app.routers.users import router as users_router
 from app.routers.dog_info import router as dog_info_router
 from app.routers.auth import router as auth_router
@@ -106,4 +107,5 @@ app.include_router(dogs_router)
 app.include_router(chat_router)
 app.include_router(users_router)
 app.include_router(dog_info_router)
+app.include_router(reports_router)
 
