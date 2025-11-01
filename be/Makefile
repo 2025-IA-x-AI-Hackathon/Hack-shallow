@@ -25,14 +25,14 @@ venv:
 	python3 -m venv .venv
 
 install: venv
-	./.venv/bin/pip install --upgrade pip
-	./.venv/bin/pip install -r requirements.txt
+	../.venv/bin/pip install --upgrade pip
+	../.venv/bin/pip install -r requirements.txt
 
 run:
-	./.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $(PORT)
+	../.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $(PORT)
 
 run-dev:
-	./.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $(PORT) --reload \
+	..	/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port $(PORT) --reload \
 	  --reload-dir app --reload-dir api --reload-dir services --reload-dir graph --reload-dir core
 
 docker-build:

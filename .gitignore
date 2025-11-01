@@ -12,5 +12,6 @@
 /backup
 .env
 .DS_Store
-
+*/traces/*
 *.pyc
+app.db
