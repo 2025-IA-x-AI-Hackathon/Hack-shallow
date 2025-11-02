@@ -192,7 +192,7 @@ export default function OnboardingFlow() {
                     name="neutered"
                     value={option.value.toString()}
                     checked={isSelected}
-                    onChange={() => updateFormData('neutered', option.value)}
+                    onChange={() => updateFormData('neutered', option.value.toString())}
                     className="mr-3"
                   />
                   <span className="text-lg">{option.label}</span>
