@@ -15,6 +15,40 @@ export function AgentResponseCard({ result, index }: AgentResponseCardProps) {
   const config = getAgentConfig(result.agent);
   const colorClasses = getAgentColorClasses(config.color);
 
+  function escapeHtml(s: string) {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function mdToHtml(md: string) {
+    if (!md) return '';
+    let out = md;
+    // code fences
+    out = out.replace(/```([\s\S]*?)```/g, (_: string, code: string) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`);
+    // inline code
+    out = out.replace(/`([^`]+)`/g, (_: string, code: string) => `<code>${escapeHtml(code)}</code>`);
+    // headings
+    out = out.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>');
+    out = out.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>');
+    out = out.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>');
+    // bold / italic (basic)
+    out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    out = out.replace(/\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    // links
+    out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    // paragraphs
+    out = out
+      .split(/\n\n+/)
+      .map((block: string) => {
+        if (/^<h[1-3]>/.test(block) || /^<pre>/.test(block)) return block;
+        return `<p>${block.replace(/\n/g, '<br/>')}</p>`;
+      })
+      .join('\n');
+    return out;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -33,10 +67,11 @@ export function AgentResponseCard({ result, index }: AgentResponseCardProps) {
         </div>
       </div>
 
-      {/* Answer Content */}
-      <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-        {result.answer}
-      </div>
+      {/* Answer Content (Markdown) */}
+      <div
+        className="text-sm text-foreground leading-relaxed prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: mdToHtml(result.answer) }}
+      />
 
       {/* Report Agent: Download Button */}
       {result.agent === 'report' && (

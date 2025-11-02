@@ -185,16 +185,18 @@ async def autofill_from_history(dog_id: int, session: AsyncSession = Depends(get
         text_blocks.append(f"[{who}] {m.content}")
     history_text = "\n".join(text_blocks)[-5000:]
 
-    # LLM으로 추출 지시
+    # LLM으로 추출 지시 (엄격 모드)
     settings = get_settings()
     llm = get_chat_model(settings)
     allowed = [f"{r.category.value}:{r.key}" for r in missing]
     system = (
-        "다음은 반려견 주고 받은 대화입니다.\n"
-        "가능한 경우 아래 키에 해당하는 정보 값을 JSON으로 추출하세요. 모르면 키를 생략하세요.\n"
-        "키는 '카테고리:키' 형식입니다. 예) diet:feeding_method\n"
-        f"허용 키 목록: {', '.join(allowed)}\n"
-        "출력은 반드시 JSON 객체 하나만: { 'diet:feeding_method': '...' , 'behavior:barking': '예/아니오 또는 true/false' }"
+        "다음은 반려견과의 대화 기록입니다.\n"
+        "다음 규칙으로 매우 엄격하게 정보를 추출합니다.\n"
+        "- 오직 매우 확실한(high) 경우에만 값을 포함하세요. 불확실하면 해당 키를 아예 생략하세요.\n"
+        "- 키는 '카테고리:키' 형식이며, 아래 허용 목록에 포함된 키만 출력하세요.\n"
+        "- 출력 형식(JSON): { 'diet:feeding_method': { 'value': '...', 'confidence': 'high|medium|low' }, 'behavior:barking': { 'value': 'true|false', 'confidence': 'high|medium|low' } }\n"
+        "- boolean은 반드시 'true' 또는 'false' 문자열로 출력하세요.\n"
+        f"허용 키 목록: {', '.join(allowed)}"
     )
     prompt = [
         ("system", system),
@@ -209,24 +211,48 @@ async def autofill_from_history(dog_id: int, session: AsyncSession = Depends(get
     except Exception:
         extracted = {}
 
+    def is_uncertain_text(s: str) -> bool:
+        s2 = s.strip().lower()
+        uncertain_tokens = [
+            "아마", "추정", "가능", "같", "모름", "불확실", "추측", "기억 안",
+            "maybe", "probably", "likely", "unknown", "unsure", "not sure",
+        ]
+        return any(tok in s2 for tok in uncertain_tokens)
+
     updated_rows: List[DogInfoItem] = []
     for r in missing:
         key_full = f"{r.category.value}:{r.key}"
         if key_full not in extracted:
             continue
-        val = extracted[key_full]
-        # boolean 타입 정규화
+        entry = extracted[key_full]
+        # 허용 스키마: { value, confidence } 또는 과거 문자열 값
+        conf = None
+        val = entry
+        if isinstance(entry, dict):
+            conf = str(entry.get("confidence", "")).strip().lower()
+            val = entry.get("value")
+        # confidence 체크: high만 반영
+        if conf is not None and conf != "high":
+            continue
+        # 값 전처리
         if r.question_type == QuestionType.boolean:
             sval = str(val).strip().lower()
             if sval in ("yes", "true", "1", "y", "예", "네"):
-                val = "true"
+                norm = "true"
             elif sval in ("no", "false", "0", "n", "아니오", "아니요"):
-                val = "false"
+                norm = "false"
             else:
-                val = str(val)
+                # 불명확: 스킵
+                continue
+            val_norm = norm
         else:
-            val = str(val)
-        r.answer_text = val
+            sval = str(val or "").strip()
+            # 너무 짧거나 불확실한 표현은 제외
+            if len(sval) < 2 or is_uncertain_text(sval):
+                continue
+            val_norm = sval
+
+        r.answer_text = val_norm
         r.source = "history"
         r.updated_at = datetime.utcnow()
         updated_rows.append(r)
