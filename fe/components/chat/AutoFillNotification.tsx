@@ -17,8 +17,8 @@ function AutoFillNotification({ updates }: AutoFillNotificationProps) {
   return (
     <div className="text-xs text-muted-foreground/70 mt-1">
       정보 {updates.length}건 업데이트됨
-      {labels && `: ${labels}`}
-      {remaining > 0 && ` 외 ${remaining}건`}
+      {/* {labels && `: ${labels}`}
+      {remaining > 0 && ` 외 ${remaining}건`} */}
     </div>
   );
 }
