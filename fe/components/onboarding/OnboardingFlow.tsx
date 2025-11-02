@@ -62,23 +62,7 @@ export default function OnboardingFlow() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Enter 키로 다음 단계 진행
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || isLoading) return;
-      const target = e.target as HTMLElement | null;
-      const tag = (target?.tagName || '').toLowerCase();
-      const type = (target as HTMLInputElement)?.type;
-      // textarea는 제외, 입력 중에 줄바꿈 방지
-      if (tag === 'textarea') return;
-      // step 0에서 이름이 비어 있으면 진행 금지
-      if (currentStep === 0 && !formData.name) return;
-      e.preventDefault();
-      handleNext();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [currentStep, formData.name, isLoading]);
+  // 키보드 Enter 이동 제거: 클릭으로만 진행
 
   const renderStep = () => {
     switch (currentStep) {
