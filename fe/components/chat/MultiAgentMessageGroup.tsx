@@ -13,6 +13,7 @@ export function MultiAgentMessageGroup({ results, timestamp }: MultiAgentMessage
   if (results.length === 0) return null;
 
   const totalDuration = results.reduce((sum, r) => sum + r.duration_ms, 0);
+  const isGeneralOnly = results.length === 1 && results[0]?.agent === 'general';
 
   return (
     <motion.div
@@ -26,9 +27,9 @@ export function MultiAgentMessageGroup({ results, timestamp }: MultiAgentMessage
         <div className="bg-card border border-border rounded-t-lg p-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xl">💬</span>
+              <span className="text-xl">{isGeneralOnly ? '😊' : '💬'}</span>
               <span className="text-sm font-semibold text-foreground">
-                {results.length}명의 전문가가 답변했습니다
+                {isGeneralOnly ? '일반 상담 답변' : `${results.length}명의 전문가가 답변했습니다`}
               </span>
             </div>
             <div className="text-xs text-muted-foreground">

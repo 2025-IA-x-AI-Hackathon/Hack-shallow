@@ -7,6 +7,7 @@ import uuid
 
 from langchain_core.pydantic_v1 import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import START, END, StateGraph
 
 from core.config import get_settings
@@ -90,7 +91,59 @@ async def execute_node(state: QAState) -> QAState:
     tasks = state.get("tasks", [])
     start_ts = time.time()
     t0 = time.perf_counter()
-    results = await manager.ask_many(tasks)
+    # 모든 에이전트가 비선택(use=false)되어 tasks가 비어있는 경우
+    # 친절한 일반 LLM으로 답변을 생성하여 반환한다.
+    if not tasks:
+        model = get_chat_model(settings)
+        # 간단한 강아지 프로필 포맷팅
+        dog = state.get("dog_context") or {}
+        dog_lines = []
+        if dog.get("name"):
+            dog_lines.append(f"이름: {dog.get('name')}")
+        if dog.get("breed"):
+            dog_lines.append(f"견종: {dog.get('breed')}")
+        if dog.get("sex"):
+            dog_lines.append(f"성별: {dog.get('sex')}")
+        if dog.get("weight_kg") is not None:
+            dog_lines.append(f"체중: {dog.get('weight_kg')} kg")
+        dog_profile = "\n".join(dog_lines) or "(강아지 정보 없음)"
+
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    "당신은 친절하고 공감적인 일반 반려견 상담사입니다.\n"
+                    "- 사용자의 질문을 먼저 이해하고, 쉬운 한국어로 간결하게 답하세요.\n"
+                    "- 위험/응급, 약물, 정확한 진단이 필요한 사안은 반드시 수의사 상담을 권유하세요.\n"
+                    "- 강아지 정보가 제공되면 자연스럽게 참고하되 과도한 추론은 피하세요.\n"
+                    "- 전문 지식 과시는 지양하고, 사용자가 바로 실천할 수 있는 다음 행동을 제안하세요.",
+                ),
+                (
+                    "human",
+                    "질문: {question}\n\n강아지 정보:\n{dog_profile}",
+                ),
+            ]
+        )
+        chain = prompt | model | StrOutputParser()
+        answer_text = await chain.ainvoke(
+            {"question": state["user_question"], "dog_profile": dog_profile}
+        )
+
+        duration_ms = (time.perf_counter() - t0) * 1000.0
+        ended_at = time.time()
+        results = [
+            {
+                "agent": "general",
+                "question": state["user_question"],
+                "answer": answer_text,
+                "retrieved_docs": [],
+                "duration_ms": duration_ms,
+                "started_at": start_ts,
+                "ended_at": ended_at,
+            }
+        ]
+    else:
+        results = await manager.ask_many(tasks)
     duration_ms = (time.perf_counter() - t0) * 1000.0
 
     trace = state.get("trace", {})
