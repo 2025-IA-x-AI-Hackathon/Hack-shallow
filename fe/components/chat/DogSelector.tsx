@@ -2,6 +2,7 @@
 
 import { observer } from 'mobx-react-lite';
 import { chatStore } from '@/stores/chatStore';
+import { getDogImageByBreed } from '@/lib/dogImages';
 
 function DogSelector() {
   if (chatStore.dogs.length === 0) {
@@ -10,10 +11,15 @@ function DogSelector() {
 
   // 강아지가 한 마리만 있는 경우 드롭다운 대신 이름만 표시
   if (chatStore.dogs.length === 1) {
+    const imgSrc = getDogImageByBreed(chatStore.currentDog?.breed);
     return (
       <div className="px-4 py-2 bg-muted/50 border-b border-border">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🐕</span>
+          {imgSrc ? (
+            <img src={imgSrc} alt={chatStore.currentDog?.name || 'dog'} className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <span className="text-2xl">🐕</span>
+          )}
           <span className="text-sm font-medium text-foreground">
             {chatStore.currentDog?.name}
           </span>
@@ -25,7 +31,14 @@ function DogSelector() {
   return (
     <div className="px-4 py-2 bg-muted/50 border-b border-border">
       <div className="flex items-center gap-2">
-        <span className="text-2xl">🐕</span>
+        {(() => {
+          const imgSrc = getDogImageByBreed(chatStore.currentDog?.breed);
+          return imgSrc ? (
+            <img src={imgSrc} alt={chatStore.currentDog?.name || 'dog'} className="w-10 h-10 rounded-full object-cover" />
+          ) : (
+            <span className="text-2xl">🐕</span>
+          );
+        })()}
         <select
           value={chatStore.currentDogId || ''}
           onChange={(e) => chatStore.setCurrentDog(Number(e.target.value))}

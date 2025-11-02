@@ -126,13 +126,42 @@ async def generate_markdown(session: AsyncSession, dog_id: int) -> Dict[str, str
         "- 필요한 경우 bullet/번호 목록 적극 활용\n"
         "- 근거가 불충분하면 '불충분'으로 표기\n"
         "- 반드시 '위험 신호 감지' 섹션을 포함해 보호자가 인지하지 못할 수 있는 중요한 임상적 시그널을 명시(심각도, 근거, 권고)\n"
+        "- 구조화 정보, 표, 각 섹션의 항목 라벨 옆에는 최근 '업데이트 날짜'를 괄호로 표기하세요.\n"
+        "  (형식: YYYY-MM-DD, 시간은 표기하지 않음. 예: 항목: 값 (업데이트: 2025-11-02))\n"
+        "- 가능한 모든 항목에 업데이트 날짜를 포함하되, 날짜가 없으면 생략합니다.\n"
     )
+    # 최신 업데이트 타임라인(최근순) 정리
+    def _timeline_lines(items: List[dict]) -> str:
+        def _key(dt: Optional[str]):
+            from datetime import datetime
+            if not dt:
+                return datetime.min
+            try:
+                return datetime.fromisoformat(dt)
+            except Exception:
+                return datetime.min
+        sorted_items = sorted(items, key=lambda x: _key(x.get("updated_at")), reverse=True)
+        out = []
+        for r in sorted_items:
+            label = f"{r.get('category')}:{r.get('key')}"
+            ans = r.get('answer')
+            upd = r.get('updated_at')
+            upd_date = None
+            if isinstance(upd, str):
+                # ISO8601에서 날짜 부분만 추출 (YYYY-MM-DD)
+                upd_date = upd.split("T")[0]
+            out.append(f"- {label}: {ans}{(f' (업데이트: {upd_date})' if upd_date else '')}")
+        return "\n".join(out) if out else "(최근 업데이트 기록 없음)"
+
+    timeline_text = _timeline_lines(info_answered)
+
     human = (
         f"[제목]\n진료 보고서 - {dog.name} (#{dog.id})\n\n"
         f"[환자 기본정보]\n"
         f"- id: {dog.id}\n- 이름: {dog.name}\n- 견종: {dog.breed}\n- 생년: {dog.birth_date} (추정 나이: {dog_age_years}년)\n- 성별: {dog.sex.value}\n- 중성화: {dog.neutered}\n- 체중(kg): {dog.weight_kg}\n\n"
         f"[보호자]\n- id: {(owner.id if owner else None)}\n- username: {(owner.username if owner else None)}\n\n"
         f"[구조화 정보 요약]\n{info_text}\n\n"
+        f"[데이터 입력/업데이트 타임라인]\n(최근순)\n{timeline_text}\n\n"
         f"[구조화 정보(세부)]\n- answered: {json.dumps(info_answered, ensure_ascii=False)}\n- missing: {json.dumps(info_missing, ensure_ascii=False)}\n- by_category: {json.dumps(info_by_category, ensure_ascii=False)}\n- dog_info_items(raw): {json.dumps(dog_info_items, ensure_ascii=False)}\n\n"
         f"[히스토리 정보]\n요약대상 총 {history_stats['total']}건, 구간={history_stats['range']}, 사용자={history_stats['user_count']}, 어시스턴트={history_stats['assistant_count']}\n\n"
         f"[히스토리(최근 50건)]\n{history_tail}\n\n"

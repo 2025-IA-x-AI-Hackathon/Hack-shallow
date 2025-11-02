@@ -6,6 +6,7 @@ import { AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
 import ProgressBar from './ProgressBar';
 import FormStep from './FormStep';
+import { DOG_IMAGES } from '@/lib/dogImages';
 
 const TOTAL_STEPS = 6;
 
@@ -101,17 +102,22 @@ export default function OnboardingFlow() {
       case 1:
         return (
           <FormStep
-            title="반려견의 품종을 알려주세요"
-            description="품종을 모르시면 넘어가셔도 됩니다."
+            title="반려견의 품종을 선택해주세요"
+            description="선택하지 않으셔도 괜찮습니다."
             direction={direction}
           >
-            <input
-              type="text"
+            <select
               value={formData.breed}
               onChange={(e) => updateFormData('breed', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="예: 푸들"
-            />
+              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+              <option value="">선택하지 않음</option>
+              {DOG_IMAGES.map((dog) => (
+                <option key={dog.label} value={dog.label}>
+                  {dog.label}
+                </option>
+              ))}
+            </select>
           </FormStep>
         );
       case 2:

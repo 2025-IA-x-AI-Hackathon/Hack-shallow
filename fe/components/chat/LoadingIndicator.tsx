@@ -3,6 +3,7 @@
 import { getAgentConfig } from '@/lib/agentConfig';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
 
 export type LoadingPhase = 'analyzing' | 'routing' | 'responding';
 
@@ -10,13 +11,38 @@ interface LoadingIndicatorProps {
   phase: LoadingPhase;
   activeAgents?: string[];
   completedAgents?: string[];
+  messages?: string[]; // 1초 간격 순차 노출 멘트(총 5개 권장)
 }
 
 export function LoadingIndicator({
   phase,
   activeAgents = [],
   completedAgents = [],
+  messages,
 }: LoadingIndicatorProps) {
+  // 순차 멘트 처리: 1초마다 다음 멘트, 마지막 멘트에서 정지
+  const defaultMessages = useMemo(
+    () => [
+      '우리 아이에 맞는 전문가 찾고 있어요!',
+      '우리 아이 정보를 바탕으로 분석하고 있어요!',
+      '관련 지식을 빠르게 탐색하고 있어요!',
+      '최적의 답변 구성을 준비하고 있어요!',
+      '곧 답변을 전달드릴게요!',
+    ],
+    []
+  );
+  const displayMessages = messages && messages.length > 0 ? messages : defaultMessages;
+  const [msgIndex, setMsgIndex] = useState(0);
+
+  useEffect(() => {
+    setMsgIndex(0);
+    const timer = setInterval(() => {
+      setMsgIndex((prev) => (prev < displayMessages.length - 1 ? prev + 1 : prev));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [displayMessages]);
+
+  const currentMsg = displayMessages[msgIndex] || displayMessages[0];
   if (phase === 'analyzing') {
     return (
       <motion.div
@@ -26,9 +52,9 @@ export function LoadingIndicator({
       >
         <div className="max-w-[85%] bg-muted rounded-lg p-4 border border-border">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">🤖</span>
+            <span className="text-2xl">🐶</span>
             <span className="text-sm font-semibold text-foreground">
-              AI 오케스트레이터가 분석 중...
+              {currentMsg}
             </span>
           </div>
           <div className="w-full bg-muted-foreground/20 rounded-full h-2 overflow-hidden">
@@ -58,6 +84,7 @@ export function LoadingIndicator({
               {activeAgents.length}명의 전문가에게 전달했습니다
             </span>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">{currentMsg}</p>
           <div className="space-y-2">
             {activeAgents.map((agentType) => {
               const config = getAgentConfig(agentType);
@@ -91,6 +118,7 @@ export function LoadingIndicator({
               전문가들의 답변
             </span>
           </div>
+          <p className="text-xs text-muted-foreground mb-3">{currentMsg}</p>
           <div className="space-y-3">
             {activeAgents.map((agentType) => {
               const config = getAgentConfig(agentType);

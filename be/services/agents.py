@@ -106,10 +106,12 @@ def _format_dog_info_items(dog: Optional[Dict[str, Any]]) -> str:
         cat = it.get("category")
         key = it.get("key")
         ans = it.get("answer")
+        upd = it.get("updated_at")
         if ans is None or str(ans).strip() == "":
             continue
         label = f"{cat}:{key}" if cat and key else (key or cat or "항목")
-        lines.append(f"- {label}: {ans}")
+        suffix = f" (업데이트: {upd})" if upd else ""
+        lines.append(f"- {label}: {ans}{suffix}")
     return "\n".join(lines) or "(추가 강아지 정보 없음)"
 
 @dataclass

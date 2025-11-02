@@ -174,10 +174,9 @@ _GRAPH = None
 
 
 def get_graph():
-    global _GRAPH
-    if _GRAPH is None:
-        _GRAPH = build_graph()
-    return _GRAPH
+    # 항상 최신 노드 로직을 반영하기 위해 매 호출 시 그래프를 재구성한다.
+    # (이전에는 캐시되어 코드 변경 시 반영되지 않는 문제가 있었음)
+    return build_graph()
 
 
 from services.tracing import default_trace_envelope, write_trace
