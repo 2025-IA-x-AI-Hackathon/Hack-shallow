@@ -37,27 +37,32 @@ function ChatInterface() {
     initialize();
   }, [router, authStore.isHydrated]);
 
-  // Proactive question timer - check every minute
+  // Proactive: interval check + visibility + Alt+X (단일 훅)
   useEffect(() => {
     const ONE_MINUTE_MS = 60 * 1000;
 
-    const intervalId = setInterval(() => {
-      chatStore.checkAndTriggerProactiveQuestion();
-    }, ONE_MINUTE_MS);
+    const tick = () => chatStore.checkAndTriggerProactiveQuestion();
+    const intervalId = setInterval(tick, ONE_MINUTE_MS);
 
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Check proactive question on visibility change (return to page)
-  useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        chatStore.checkAndTriggerProactiveQuestion();
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // macOS Option(Alt)+X → e.key가 특수문자(≈)로 변환될 수 있으므로 code로 판별
+      if (e.altKey && e.code === 'KeyX') {
+        e.preventDefault();
+        chatStore.forceProactiveQuestion();
       }
     };
+    window.addEventListener('keydown', onKeyDown);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const handleLogout = () => {
@@ -104,7 +109,7 @@ function ChatInterface() {
       {/* 헤더 */}
       <div className="flex items-center justify-between p-4 border-b border-border bg-card">
         <div>
-          <h1 className="text-xl font-bold text-foreground">반려견 건강 AI 상담</h1>
+          <h1 className="text-xl font-bold text-foreground">Petppy</h1>
           {authStore.username && (
             <p className="text-sm text-muted-foreground">{authStore.username}님, 환영합니다!</p>
           )}

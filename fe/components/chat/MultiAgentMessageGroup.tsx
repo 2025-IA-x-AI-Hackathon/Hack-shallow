@@ -53,9 +53,9 @@ export function MultiAgentMessageGroup({ results, timestamp }: MultiAgentMessage
 
           {/* Total Response Time */}
           <div className="pt-3 border-t border-border">
-            <p className="text-xs text-muted-foreground text-right">
+            {/* <p className="text-xs text-muted-foreground text-right">
               전체 응답 시간: {(totalDuration / 1000).toFixed(2)}초
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

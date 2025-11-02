@@ -306,10 +306,10 @@ class ChatStore {
   async checkAndTriggerProactiveQuestion() {
     if (!this.currentDogId || !this.lastConversationTimestamp) return;
 
-    const THIRTY_SECONDS_MS = 30 * 1000;
+    const THIRTY_MINUTES_MS = 30 * 60 * 1000;
     const timeSinceLastConversation = Date.now() - this.lastConversationTimestamp;
 
-    if (timeSinceLastConversation >= THIRTY_SECONDS_MS && !this.proactiveQuestion) {
+    if (timeSinceLastConversation >= THIRTY_MINUTES_MS && !this.proactiveQuestion) {
       try {
         const question = await api.getRandomUnansweredQuestion(this.currentDogId);
         runInAction(() => {
@@ -323,6 +323,18 @@ class ChatStore {
         }
         console.error('Failed to fetch proactive question:', error);
       }
+    }
+  }
+
+  async forceProactiveQuestion() {
+    if (!this.currentDogId) return;
+    try {
+      const question = await api.getRandomUnansweredQuestion(this.currentDogId);
+      runInAction(() => {
+        this.proactiveQuestion = question;
+      });
+    } catch (error) {
+      console.error('Failed to force proactive question:', error);
     }
   }
 

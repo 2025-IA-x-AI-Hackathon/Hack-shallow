@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { api } from '@/lib/api';
@@ -60,6 +60,24 @@ export default function OnboardingFlow() {
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Enter 키로 다음 단계 진행
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || isLoading) return;
+      const target = e.target as HTMLElement | null;
+      const tag = (target?.tagName || '').toLowerCase();
+      const type = (target as HTMLInputElement)?.type;
+      // textarea는 제외, 입력 중에 줄바꿈 방지
+      if (tag === 'textarea') return;
+      // step 0에서 이름이 비어 있으면 진행 금지
+      if (currentStep === 0 && !formData.name) return;
+      e.preventDefault();
+      handleNext();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [currentStep, formData.name, isLoading]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -122,7 +140,6 @@ export default function OnboardingFlow() {
               {[
                 { value: 'male', label: '남아' },
                 { value: 'female', label: '여아' },
-                { value: 'unknown', label: '모름' },
               ].map((option) => (
                 <label
                   key={option.value}
@@ -157,11 +174,15 @@ export default function OnboardingFlow() {
               {[
                 { value: true, label: '예, 받았습니다' },
                 { value: false, label: '아니요, 받지 않았습니다' },
-              ].map((option) => (
+              ].map((option) => {
+                const isSelected =
+                  (formData.neutered === option.value) ||
+                  (String(formData.neutered) === option.value.toString());
+                return (
                 <label
                   key={option.value.toString()}
                   className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                    formData.neutered === option.value
+                    isSelected
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
@@ -170,13 +191,13 @@ export default function OnboardingFlow() {
                     type="radio"
                     name="neutered"
                     value={option.value.toString()}
-                    checked={formData.neutered === option.value}
-                    onChange={() => updateFormData('neutered', option.value.toString())}
+                    checked={isSelected}
+                    onChange={() => updateFormData('neutered', option.value)}
                     className="mr-3"
                   />
                   <span className="text-lg">{option.label}</span>
                 </label>
-              ))}
+              );})}
             </div>
           </FormStep>
         );

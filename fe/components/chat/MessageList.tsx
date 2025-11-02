@@ -5,7 +5,9 @@ import { chatStore } from '@/stores/chatStore';
 import { ChatMessage } from '@/lib/api';
 import { useEffect, useRef } from 'react';
 import AgentMessageGroup from './AgentMessageGroup';
-import { MultiAgentMessageGroup } from './MultiAgentMessageGroup';
+import { AgentResponseCard } from './AgentResponseCard';
+import { AgentResult } from '@/lib/api';
+// MultiAgentMessageGroup 사용 중지
 import { LoadingIndicator } from './LoadingIndicator';
 import { ProactiveQuestion } from './ProactiveQuestion';
 import AutoFillNotification from './AutoFillNotification';
@@ -48,12 +50,16 @@ function MessageList() {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-2">
       {chatStore.messages.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-muted-foreground">
-          <div className="text-center">
-            <p className="text-lg mb-2">🐕 반려견 건강 상담을 시작해보세요</p>
-            <p className="text-sm">궁금한 점을 자유롭게 물어보세요!</p>
+        chatStore.proactiveQuestion ? (
+          <ProactiveQuestion question={chatStore.proactiveQuestion} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className="text-center">
+              <p className="text-lg mb-2">🐕 반려견 건강 상담을 시작해보세요</p>
+              <p className="text-sm">궁금한 점을 자유롭게 물어보세요!</p>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <>
           {messageGroups.map((group, groupIndex) => {
@@ -87,8 +93,25 @@ function MessageList() {
                 );
               });
             } else {
-              // Assistant messages - 단순 텍스트로 저장됨 (frontend.html과 동일)
-              return <AgentMessageGroup key={groupIndex} messages={group.messages} />;
+              // Assistant messages: AgentResponseCard로 렌더 (Markdown 지원)
+              const results: AgentResult[] = group.messages.map((m) => ({
+                agent: m.agent || 'assistant',
+                question: '',
+                answer: m.content,
+                retrieved_docs: (m as any).retrieved_docs || [],
+                duration_ms: 0,
+                started_at: Date.parse(m.created_at) / 1000,
+                ended_at: Date.parse(m.created_at) / 1000,
+              }));
+              return (
+                <div key={groupIndex} className="flex justify-start mb-4">
+                  <div className="max-w-[90%] w-full bg-card border border-border rounded-lg p-4 space-y-4 shadow-sm">
+                    {results.map((r, idx) => (
+                      <AgentResponseCard key={idx} result={r} index={idx} />
+                    ))}
+                  </div>
+                </div>
+              );
             }
           })}
 
@@ -101,13 +124,7 @@ function MessageList() {
             />
           )}
 
-          {/* Show pending multi-agent results during loading */}
-          {chatStore.pendingResults && chatStore.pendingResults.length > 0 && (
-            <MultiAgentMessageGroup
-              results={chatStore.pendingResults}
-              timestamp={new Date().toISOString()}
-            />
-          )}
+          {/* MultiAgentMessageGroup 표시 비활성화 */}
 
           {/* Proactive Question - 메시지 리스트 맨 아래 */}
           {chatStore.proactiveQuestion && (

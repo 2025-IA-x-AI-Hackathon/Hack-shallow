@@ -102,9 +102,9 @@ export function AgentResponseCard({ result, index }: AgentResponseCardProps) {
 
       {/* Response Time */}
       <div className="mt-3 pt-2 border-t border-border">
-        <p className="text-xs text-muted-foreground">
+        {/* <p className="text-xs text-muted-foreground">
           응답 시간: {(result.duration_ms / 1000).toFixed(2)}초
-        </p>
+        </p> */}
       </div>
     </motion.div>
   );

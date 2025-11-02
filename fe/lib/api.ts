@@ -44,8 +44,31 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    let message = '요청 처리 중 오류가 발생했습니다.';
+    let payload: any = null;
+    try {
+      payload = await response.json();
+    } catch {}
+
+    if (payload) {
+      if (typeof payload.detail === 'string') {
+        message = payload.detail;
+      } else if (Array.isArray(payload.detail)) {
+        message = payload.detail.map((e: any) => e?.msg || e?.detail || JSON.stringify(e)).join('\n');
+      } else if (payload.message) {
+        message = payload.message;
+      }
+    }
+
+    // 상태코드별 가독성 향상
+    if (response.status === 400 && !message) message = '입력값을 다시 확인해주세요.';
+    if (response.status === 401 && !message) message = '인증이 필요하거나 정보가 올바르지 않습니다.';
+    if (response.status === 403 && !message) message = '권한이 없습니다.';
+    if (response.status === 404 && !message) message = '요청한 리소스를 찾을 수 없습니다.';
+    if (response.status === 409 && !message) message = '이미 존재합니다.';
+    if (response.status >= 500 && !message) message = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+
+    throw new Error(message);
   }
 
   return response.json();
